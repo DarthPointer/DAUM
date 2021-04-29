@@ -11,17 +11,22 @@ namespace daum
     class Program
     {
         private static string configPath;
+        private static string toolDir;
 
         private static string exitCommand = "exit";
+        private static string printNullConfigCommand = "nullConfig";
+        private static string parseCommand = "parse";
 
         private static Dictionary<string, Operation> operations = new Dictionary<string, Operation>() {
-            { "-n", new NameDefOperation() }
+            { "-n", new NameDefOperation() },
+            { "-i", new ImportDefOperation() }
         };
 
         static void Main(string[] args)
         {
-            configPath = Assembly.GetExecutingAssembly().Location;
-            configPath = configPath.Substring(0, configPath.LastIndexOf('\\') + 1) + "Config.json";
+            toolDir = Assembly.GetExecutingAssembly().Location;
+            toolDir = toolDir.Substring(0, toolDir.LastIndexOf('\\') + 1);
+            configPath = toolDir + "Config.json";
 
             //Console.WriteLine(configPath);
             Config config = GetConfig();
@@ -31,21 +36,34 @@ namespace daum
 
             if (runData.fileName.Length > 0)
             {
-                bool runLoop = true;
-
                 Span<byte> span = File.ReadAllBytes(runData.fileName);
+
+                if (args.Length > 1)
+                {
+                    ProcessCommand(ref span, config, runData, new List<string>(args.AsSpan(1).ToArray()), out _, out _);
+                    return;
+                }
 
                 Console.WriteLine($"Drg Automation Utility for Modding welcomes you!");
                 Console.WriteLine($"Entered interactive mode for file {runData.fileName}");
                 Console.WriteLine();
 
+                bool runLoop = true;
                 while (runLoop)
                 {
                     try
                     {
-                        runLoop = ProcessCommand(ref span, config, runData, out string offSetterCallArgs);
+                        List<string> command = new List<string>(Console.ReadLine().Split(' '));
+                        if (command[0].Length > 0)
+                        {
+                            runLoop = ProcessCommand(ref span, config, runData, command, out bool doneSomething, out bool parsed);
+                            if (doneSomething)
+                            {
+                                if (config.autoParseAfterSuccess && !parsed) ParseFilesWithDRGPareser(config.drgParserPath, runData.fileName);
 
-                        
+                                Console.WriteLine("Done!");
+                            }
+                        }
                     }
                     catch (Exception e)
                     {
@@ -76,9 +94,9 @@ namespace daum
             return config;
         }
 
-        private static void WriteConfig(Config config)
+        private static void WriteConfig(Config config, string fileName)
         {
-            File.WriteAllText(configPath, JsonConvert.SerializeObject(config, new JsonSerializerSettings()
+            File.WriteAllText(toolDir + "NullConfig.json", JsonConvert.SerializeObject(config, new JsonSerializerSettings()
             {
                 Formatting = Formatting.Indented
             }));
@@ -96,44 +114,68 @@ namespace daum
             return runData;
         }
 
-        private static bool ProcessCommand(ref Span<byte> span, Config config, RunData runData, out string offSetterCallArgs)
+        private static bool ProcessCommand(ref Span<byte> span, Config config, RunData runData, List<string> command, out bool doneSomething, out bool parsed)
         {
-            List<string> command = new List<string>(Console.ReadLine().Split(' '));
+            doneSomething = true;
+            parsed = false;
 
             if (command.Count > 0)
             {
-                if (command[0].Length > 0)
+                if (command[0].Length > 0)      // Count and length comparisons are pretty useless here as of v1.0 but let them stay. 
                 {
                     if (command[0] == exitCommand)
                     {
-                        offSetterCallArgs = "";
+                        doneSomething = false;
                         return false;
+                    }
+
+                    if (command[0] == printNullConfigCommand)
+                    {
+                        WriteConfig(new Config(), "NullConfig.json");
+                        return true;
+                    }
+
+                    if (command[0] == parseCommand)
+                    {
+                        ParseFilesWithDRGPareser(config.drgParserPath, runData.fileName);
+                        parsed = true;
+                        return true;
                     }
 
                     string operationKey = command.TakeArg();
 
                     if (operations.ContainsKey(operationKey))
                     {
-                        offSetterCallArgs = operations[operationKey].ExecuteAndGetOffSetterAgrs(ref span, command);
+                        string offSetterCallArgs = operations[operationKey].ExecuteAndGetOffSetterAgrs(ref span, command);
 
                         if (File.Exists(runData.fileName + ".daum")) File.Delete(runData.fileName + ".daum");
                         Directory.Move(runData.fileName, runData.fileName + ".daum");
                         File.WriteAllBytes(runData.fileName, span.ToArray());
 
-                        Process offSetter = Process.Start(config.offsetterPath, runData.fileName + offSetterCallArgs + " -m -r");
+                        if (offSetterCallArgs != "")
+                        {
+                            Process offSetter = Process.Start(config.offsetterPath, runData.fileName + offSetterCallArgs + " -m -r");
+                            offSetter.WaitForExit();
+                        }
 
-                        offSetter.WaitForExit();
                         span = File.ReadAllBytes(runData.fileName);
 
-                        Console.WriteLine("Done!");
                         return true;
                     }
                 }
             }
 
-            offSetterCallArgs = "";
+            doneSomething = false;
+
             return true;
         }
+
+        private static void ParseFilesWithDRGPareser(string parserPath, string uassetFileName)
+        {
+            Process parser = Process.Start(parserPath, uassetFileName);
+            parser.WaitForExit();
+        }
+
 
         private record RunData
         {
@@ -144,6 +186,8 @@ namespace daum
         private class Config
         {
             public string offsetterPath = "";
+            public string drgParserPath = "";
+            public bool autoParseAfterSuccess = false;
         }
     }
 }
