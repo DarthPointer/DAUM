@@ -19,7 +19,8 @@ namespace daum
 
         private static Dictionary<string, Operation> operations = new Dictionary<string, Operation>() {
             { "-n", new NameDefOperation() },
-            { "-i", new ImportDefOperation() }
+            { "-i", new ImportDefOperation() },
+            { "-o", new OffSetterCall() }
         };
 
         static void Main(string[] args)

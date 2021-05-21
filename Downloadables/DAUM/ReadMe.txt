@@ -23,6 +23,8 @@ Single command mode:
 changes done automatically. See example exe.bat. It is to be put to your M1K WPN files and launched to swap T1.Damage
 and T5.FastReload mods.
 
+Edited file is saved under name of the original one. .offset and .daum files are backups created after each command.
+
 Commands:
 [block] [operation] [operation params]
 

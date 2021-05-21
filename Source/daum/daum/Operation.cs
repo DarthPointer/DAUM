@@ -47,6 +47,14 @@ namespace daum
         }
     }
 
+    public class OffSetterCall : Operation
+    {
+        public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args)
+        {
+            return string.Join(' ', args);
+        }
+    }
+
     public abstract class MapOperation : Operation
     {
         private static string addOpKey = "-a";
