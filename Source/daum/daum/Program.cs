@@ -23,6 +23,9 @@ namespace daum
             { "-o", new OffSetterCall() }
         };
 
+        private static RunData runData;
+        private static Config config;
+
         static void Main(string[] args)
         {
             toolDir = Assembly.GetExecutingAssembly().Location;
@@ -30,8 +33,8 @@ namespace daum
             configPath = toolDir + "Config.json";
 
             //Console.WriteLine(configPath);
-            Config config = GetConfig();
-            RunData runData = ProcessArgs(args);
+            config = GetConfig();
+            runData = ProcessArgs(args);
 
             //Console.WriteLine(config.offsetterPath);
 
@@ -155,8 +158,7 @@ namespace daum
 
                         if (offSetterCallArgs != "")
                         {
-                            Process offSetter = Process.Start(config.offsetterPath, runData.fileName + offSetterCallArgs + " -m -r");
-                            offSetter.WaitForExit();
+                            CallOffSetterWithArgs(offSetterCallArgs + " -m -r");
                         }
 
                         span = File.ReadAllBytes(runData.fileName);
@@ -169,6 +171,12 @@ namespace daum
             doneSomething = false;
 
             return true;
+        }
+
+        public static void CallOffSetterWithArgs(string offSetterCallArgs)
+        {
+            Process offSetter = Process.Start(config.offsetterPath, runData.fileName + offSetterCallArgs);
+            offSetter.WaitForExit();
         }
 
         private static void ParseFilesWithDRGPareser(string parserPath, string uassetFileName)

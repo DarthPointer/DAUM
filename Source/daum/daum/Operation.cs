@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using DRGOffSetterLib;
+using System.Diagnostics;
 
 namespace daum
 {
@@ -51,7 +52,8 @@ namespace daum
     {
         public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args)
         {
-            return string.Join(' ', args);
+            Program.CallOffSetterWithArgs(' ' + string.Join(' ', args));
+            return "";
         }
     }
 
