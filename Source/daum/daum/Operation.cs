@@ -486,7 +486,7 @@ namespace daum
             Int32 newExportSerialOffset = DOLib.Int32FromSpanOffset(span, addAtOffset + relativeSerialOffsetOffset);
             Int32 newExportFileOffset = newExportSerialOffset - DOLib.Int32FromSpanOffset(span, headerSizeOffset);
 
-            Span<byte> stubExport = new Span<byte>(new byte[16]);
+            Span<byte> stubExport = new Span<byte>(new byte[12]);
             DOLib.WriteInt32IntoOffset(stubExport, FindNameIndex(span, "None").Value, 0);
             uexp = Insert(uexp, stubExport, newExportFileOffset);
 
@@ -495,7 +495,7 @@ namespace daum
 
             File.WriteAllBytes(uexpName, uexp.ToArray());
 
-            Program.CallOffSetterWithArgs($" -e 16 {newExportSerialOffset} -r -m");
+            Program.CallOffSetterWithArgs($" -e 12 {newExportSerialOffset} -r -m");
 
             span = File.ReadAllBytes(Program.runData.fileName);
 
