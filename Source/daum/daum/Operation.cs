@@ -65,6 +65,7 @@ namespace daum
         private static string replaceKey = "-r";
         protected static string byIndexKey = "-i";
         protected static string skipKey = "-s";
+        protected static string indexOfExportKey = "-e";
 
         protected static Int32 nameOffsetOffset = 45;
         protected static Int32 nameCountOffset = 41;
@@ -253,6 +254,26 @@ namespace daum
             }
 
             return null;
+        }
+
+        protected static Int32? GetImportExportIndex(Span<byte> span, List<string> args)
+        {
+            string arg0 = args[0];
+
+            if (arg0 == byIndexKey)
+            {
+                args.TakeArg();
+                return Int32.Parse(args.TakeArg());
+            }
+            else if (arg0 == indexOfExportKey)
+            {
+                args.TakeArg();
+                return GetExportIndex(span, args);
+            }
+            else
+            {
+                return GetImportIndex(span, args);
+            }
         }
     }
 
@@ -454,10 +475,10 @@ namespace daum
         {
             useStandardBackup = false;
 
-            Int32 _class = GetImportIndex(span, args).Value;
+            Int32 _class = GetImportExportIndex(span, args).Value;
             Int32 super = Int32.Parse(args.TakeArg());
-            Int32 template = GetImportIndex(span, args).Value;
-            Int32 outer = GetExportIndex(span, args).Value;
+            Int32 template = GetImportExportIndex(span, args).Value;
+            Int32 outer = GetImportExportIndex(span, args).Value;
             Int32 name = GetNameIndex(span, args).Value;
             Int32 nameAug = Int32.Parse(args.TakeArg());
             Int32 flags = Int32.Parse(args.TakeArg());
