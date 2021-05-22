@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using DRGOffSetterLib;
-using System.Diagnostics;
+using System.IO;
 
 namespace daum
 {
@@ -53,6 +53,7 @@ namespace daum
         public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args)
         {
             Program.CallOffSetterWithArgs(' ' + string.Join(' ', args));
+            span = File.ReadAllBytes(Program.runData.fileName);
             return "";
         }
     }
@@ -70,7 +71,13 @@ namespace daum
         protected static Int32 importOffsetOffset = 69;
         protected static Int32 importCountOffset = 65;
 
+        protected static Int32 importNameOffset = 20;
+        protected static Int32 importDefSize = 28;
+
         protected static Int32 exportOffsetOffset = 61;
+        protected static Int32 exportCountOffset = 57;
+
+        protected static Int32 dependsOffsetOffset = 73;
 
         protected static Int32 stringSizeDesignationSize = 4;
 
@@ -128,6 +135,101 @@ namespace daum
             }
 
             return result;
+        }
+
+        protected static Int32? FindNameIndex(Span<byte> span, string name)
+        {
+            Int32 currentNameOffset = DOLib.Int32FromSpanOffset(span, nameOffsetOffset);
+
+            for (int processedRecords = 0; processedRecords < DOLib.Int32FromSpanOffset(span, nameCountOffset); processedRecords++)
+            {
+                string storedName = StringFromNameDef(span, currentNameOffset);
+                if (storedName == name)
+                {
+                    return processedRecords;
+                }
+
+                currentNameOffset += 9 + storedName.Length;
+            }
+
+            return null;
+        }
+
+        protected static Int32? GetNameIndex(Span<byte> span, List<string> args)
+        {
+            string arg0 = args.TakeArg();
+
+            if (arg0 == byIndexKey)
+            {
+                return Int32.Parse(args.TakeArg());
+            }
+            else if (arg0 == "-s")
+            {
+                return null;
+            }
+            else
+            {
+                return (Int32)FindNameIndex(span, arg0);
+            }
+        }
+
+        protected static Int32? GetImportIndex(Span<byte> span, List<string> args)
+        {
+            string arg0 = args.TakeArg();
+
+            if (arg0 == byIndexKey)
+            {
+                return Int32.Parse(args.TakeArg());
+            }
+            else if (arg0 == "-s")
+            {
+                return null;
+            }
+            else
+            {
+                return (Int32)FindImportIndex(span, arg0);
+            }
+        }
+
+        protected static Int32? FindImportIndex(Span<byte> span, string name)
+        {
+            Int32 nameIndex = (Int32)FindNameIndex(span, name);
+
+            Int32 currentImportOffset = DOLib.Int32FromSpanOffset(span, importOffsetOffset);
+
+            for (int processedRecords = 0; processedRecords < DOLib.Int32FromSpanOffset(span, importCountOffset); processedRecords++)
+            {
+                Int32 recordNameIndex = NameIndexFromImportDef(span, currentImportOffset);
+                if (recordNameIndex == nameIndex)
+                {
+                    return -1 * processedRecords - 1;
+                }
+
+                currentImportOffset += importDefSize;
+            }
+
+            return null;
+        }
+
+        protected static Int32 NameIndexFromImportDef(Span<byte> span, Int32 offset)
+        {
+            return DOLib.Int32FromSpanOffset(span, offset + importNameOffset);
+        }
+
+        protected static Int32? GetExportIndex(Span<byte> span, List<string> args)
+        {
+            string arg0 = args.TakeArg();
+        }
+
+        protected static Int32? FindExportIndex(Span<byte> span, string name, Int32 nameAug)
+        {
+            Int32 nameIndex = FindNameIndex(span, name).Value;
+
+            Int32 currentExportDefOffset = DOLib.Int32FromSpanOffset(span, exportOffsetOffset);
+            for (int processedRecords = 0; processedRecords < DOLib.Int32FromSpanOffset(span, exportCountOffset), processedRecords++)
+            {
+
+            }    
         }
     }
 
@@ -212,9 +314,6 @@ namespace daum
         private static Int32 importPackageOffset = 0;
         private static Int32 importClassOffset = 8;
         private static Int32 importOuterIndexOffset = 16;
-        private static Int32 importNameOffset = 20;
-
-        private static Int32 importDefSize = 28;
 
         protected override Int32 nextBlockOffsetOffset => exportOffsetOffset;
 
@@ -298,84 +397,86 @@ namespace daum
 
             return result;
         }
+    }
 
-        private static Int32? GetNameIndex(Span<byte> span, List<string> args)
+    public class ExportDefOperation : MapOperation
+    {
+        private static Int32 relativeClassOffset = 0;
+        private static Int32 relativeSuperOffset = 4;
+        private static Int32 relativeTemlateOffset = 8;
+        private static Int32 relativeOuterOffset = 12;
+        private static Int32 relativeObjectNameOffset = 16;
+        private static Int32 relativeObjectFlagsOffset = 24;
+        private static Int32 relativeSerialSizeOffset = 28;
+        private static Int32 relativeSerialOffsetOffset = 36;
+        private static Int32 relativeOtherDataOffset = 44;
+
+        private static int otherDataInt32Count = 15;
+        private static Int32 exportDefinitionSize = 104;
+
+        protected override int nextBlockOffsetOffset => dependsOffsetOffset;
+
+        protected override int thisBlockOffsetOffset => exportOffsetOffset;
+        protected override int thisBlockRecordCountOffset => exportCountOffset;
+
+        protected override string AddOperation(ref Span<byte> span, List<string> args, int addAtOffset)
         {
-            string arg0 = args.TakeArg();
-
-            if (arg0 == byIndexKey)
-            {
-                return Int32.Parse(args.TakeArg());
-            }
-            else if (arg0 == "-s")
-            {
-                return null;
-            }
-            else
-            {
-                return (Int32)FindNameIndex(span, arg0);
-            }
+            Int32 _class = GetImportIndex(span, args).Value;
+            Int32 super = Int32.Parse(args.TakeArg());
+            Int32 template = GetImportIndex(span, args).Value;
         }
 
-        private static Int32? FindNameIndex(Span<byte> span, string name)
+        protected override int? FindByIndex(Span<byte> span, List<string> args, int mapOffset, int mapRecordsCount)
         {
-            Int32 currentNameOffset = DOLib.Int32FromSpanOffset(span, nameOffsetOffset);
-
-            for (int processedRecords = 0; processedRecords < DOLib.Int32FromSpanOffset(span, nameCountOffset); processedRecords++)
-            {
-                string storedName = StringFromNameDef(span, currentNameOffset);
-                if (storedName == name)
-                {
-                    return processedRecords;
-                }
-
-                currentNameOffset += 9 + storedName.Length;
-            }
-
-            return null;
+            throw new NotImplementedException();
         }
 
-        private static Int32? GetImportIndex(Span<byte> span, List<string> args)
+        protected override int? FindByName(Span<byte> span, List<string> args, int mapOffset, int mapRecordsCount)
         {
-            string arg0 = args.TakeArg();
-
-            if (arg0 == byIndexKey)
-            {
-                return Int32.Parse(args.TakeArg());
-            }
-            else if (arg0 == "-s")
-            {
-                return null;
-            }
-            else
-            {
-                return (Int32)FindImportIndex(span, arg0);
-            }
+            throw new NotImplementedException();
         }
 
-        private static Int32? FindImportIndex(Span<byte> span, string name)
+        protected override string ReplaceOperation(ref Span<byte> span, List<string> args, int replaceAtOffset)
         {
-            Int32 nameIndex = (Int32)FindNameIndex(span, name);
-
-            Int32 currentImportOffset = DOLib.Int32FromSpanOffset(span, importOffsetOffset);
-
-            for (int processedRecords = 0; processedRecords < DOLib.Int32FromSpanOffset(span, importCountOffset); processedRecords++)
-            {
-                Int32 recordNameIndex = NameIndexFromImportDef(span, currentImportOffset);
-                if (recordNameIndex == nameIndex)
-                {
-                    return -1*processedRecords -1;
-                }
-
-                currentImportOffset += importDefSize;
-            }
-
-            return null;
+            throw new NotImplementedException();
         }
 
-        private static Int32 NameIndexFromImportDef(Span<byte> span, Int32 offset)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="_class"></param>
+        /// <param name="super"></param>
+        /// <param name="template"></param>
+        /// <param name="outer"></param>
+        /// <param name="name"></param>
+        /// <param name="nameAug">Name Augmentation. Seems to be a number sometimes used to distinguish objects sharing same "base" name</param>
+        /// <param name="flags"></param>
+        /// <param name="size">aka SerialSize, usually set to 0 in DAUM, actual value set after by OffSetter</param>
+        /// <param name="serialOffset"></param>
+        /// <param name="other">other is assumed to be 15 elements, less elements will cause exception!</param>
+        /// <returns>Span with ExportDefinition </returns>
+        private static Span<byte> MakeExportDef(Int32 _class, Int32 super, Int32 template, Int32 outer, Int32 name, Int32 nameAug, Int32 flags,
+            Int32 size, Int32 serialOffset, Int32[] other)
         {
-            return DOLib.Int32FromSpanOffset(span, offset + importNameOffset);
+            Span<byte> result = new Span<byte>(new byte[exportDefinitionSize]);
+
+            DOLib.WriteInt32IntoOffset(result, _class, relativeClassOffset);
+            DOLib.WriteInt32IntoOffset(result, super, relativeSuperOffset);
+            DOLib.WriteInt32IntoOffset(result, template, relativeTemlateOffset);
+            DOLib.WriteInt32IntoOffset(result, outer, relativeOuterOffset);
+            DOLib.WriteInt32IntoOffset(result, name, relativeObjectNameOffset);
+            DOLib.WriteInt32IntoOffset(result, nameAug, relativeObjectNameOffset + 4);
+            DOLib.WriteInt32IntoOffset(result, flags, relativeObjectFlagsOffset);
+            DOLib.WriteInt32IntoOffset(result, size, relativeSerialSizeOffset);
+            DOLib.WriteInt32IntoOffset(result, serialOffset, relativeSerialOffsetOffset);
+            Int32 currentOtherOffset = relativeOtherDataOffset;
+            for (int i = 0; i < otherDataInt32Count; i++)
+            {
+                DOLib.WriteInt32IntoOffset(result, other[i], currentOtherOffset);
+                currentOtherOffset += 4;
+            }
+
+            return result;
         }
     }
 }

@@ -23,7 +23,7 @@ namespace daum
             { "-o", new OffSetterCall() }
         };
 
-        private static RunData runData;
+        public static RunData runData;
         private static Config config;
 
         static void Main(string[] args)
@@ -186,7 +186,7 @@ namespace daum
         }
 
 
-        private record RunData
+        public record RunData
         {
             public string fileName = "";
         }
