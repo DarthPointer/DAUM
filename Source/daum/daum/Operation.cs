@@ -7,7 +7,7 @@ namespace daum
 {
     public abstract class Operation
     {
-        public abstract string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args);
+        public abstract string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool useStandardBackup);
 
         protected static Span<byte> Insert(Span<byte> span, Span<byte> insert, Int32 offset)
         {
@@ -50,8 +50,9 @@ namespace daum
 
     public class OffSetterCall : Operation
     {
-        public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args)
+        public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool useStandardBackup)
         {
+            useStandardBackup = false;
             Program.CallOffSetterWithArgs(' ' + string.Join(' ', args));
             span = File.ReadAllBytes(Program.runData.fileName);
             return "";
@@ -77,6 +78,9 @@ namespace daum
         protected static Int32 exportOffsetOffset = 61;
         protected static Int32 exportCountOffset = 57;
 
+        protected static Int32 exportNameOffset = 16;
+        protected static Int32 exportDefSize = 104;
+
         protected static Int32 dependsOffsetOffset = 73;
 
         protected static Int32 stringSizeDesignationSize = 4;
@@ -85,12 +89,12 @@ namespace daum
         protected abstract Int32 thisBlockOffsetOffset { get; }
         protected abstract Int32 thisBlockRecordCountOffset { get; }
 
-        public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args)
+        public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool useStandardBackup)
         {
             string opKey = args.TakeArg();
             if (opKey == addOpKey)
             {
-                return AddOperation(ref span, args, DOLib.Int32FromSpanOffset(span, nextBlockOffsetOffset));
+                return AddOperation(ref span, args, DOLib.Int32FromSpanOffset(span, nextBlockOffsetOffset), out useStandardBackup);
             }
             if (opKey == replaceKey)
             {
@@ -107,7 +111,7 @@ namespace daum
                         DOLib.Int32FromSpanOffset(span, thisBlockOffsetOffset), DOLib.Int32FromSpanOffset(span, thisBlockRecordCountOffset));
                 }
 
-                if (replaceOffset.HasValue) return ReplaceOperation(ref span, args, replaceOffset.Value);
+                if (replaceOffset.HasValue) return ReplaceOperation(ref span, args, replaceOffset.Value, out useStandardBackup);
                 else throw new KeyNotFoundException("Key specifying record to replace is not present in a map");
             }
 
@@ -118,9 +122,9 @@ namespace daum
 
         protected abstract Int32? FindByIndex(Span<byte> span, List<string> args, Int32 mapOffset, Int32 mapRecordsCount);
 
-        protected abstract string ReplaceOperation(ref Span<byte> span, List<string> args, Int32 replaceAtOffset);
+        protected abstract string ReplaceOperation(ref Span<byte> span, List<string> args, Int32 replaceAtOffset, out bool useStandardBackup);
 
-        protected abstract string AddOperation(ref Span<byte> span, List<string> args, Int32 addAtOffset);
+        protected abstract string AddOperation(ref Span<byte> span, List<string> args, Int32 addAtOffset, out bool useStandardBackup);
 
         protected static string StringFromNameDef(Span<byte> span, Int32 offset)
         {
@@ -219,17 +223,35 @@ namespace daum
         protected static Int32? GetExportIndex(Span<byte> span, List<string> args)
         {
             string arg0 = args.TakeArg();
+
+            if (arg0 == byIndexKey)
+            {
+                return Int32.Parse(args.TakeArg());
+            }
+            else
+            {
+                return FindExportIndex(span, arg0, Int32.Parse(args.TakeArg()));
+            }
         }
 
         protected static Int32? FindExportIndex(Span<byte> span, string name, Int32 nameAug)
         {
             Int32 nameIndex = FindNameIndex(span, name).Value;
 
+            Int32 currentExportDefIndex = 1;
             Int32 currentExportDefOffset = DOLib.Int32FromSpanOffset(span, exportOffsetOffset);
-            for (int processedRecords = 0; processedRecords < DOLib.Int32FromSpanOffset(span, exportCountOffset), processedRecords++)
+            for (int processedRecords = 0; processedRecords < DOLib.Int32FromSpanOffset(span, exportCountOffset); processedRecords++)
             {
+                if (DOLib.Int32FromSpanOffset(span, currentExportDefOffset + exportNameOffset) == nameIndex &&
+                    DOLib.Int32FromSpanOffset(span, currentExportDefOffset + exportNameOffset + 4) == nameAug)
+                {
+                    return currentExportDefIndex;
+                }
 
-            }    
+                currentExportDefIndex++;
+            }
+
+            return null;
         }
     }
 
@@ -239,8 +261,9 @@ namespace daum
         protected override Int32 thisBlockOffsetOffset => nameOffsetOffset;
         protected override Int32 thisBlockRecordCountOffset => nameCountOffset;
 
-        protected override string AddOperation(ref Span<byte> span, List<string> args, Int32 addAtOffset)
+        protected override string AddOperation(ref Span<byte> span, List<string> args, Int32 addAtOffset, out bool useStandardBackup)
         {
+            useStandardBackup = true;
             Span<byte> insert = MakeNameDef(args[0]);
             span = Insert(span, insert, addAtOffset);
 
@@ -285,8 +308,9 @@ namespace daum
             return null;
         }
 
-        protected override string ReplaceOperation(ref Span<byte> span, List<string> args, Int32 replaceAtOffset)
+        protected override string ReplaceOperation(ref Span<byte> span, List<string> args, Int32 replaceAtOffset, out bool useStandardBackup)
         {
+            useStandardBackup = true;
             string newName = args.TakeArg();
 
             Int32 oldNameStoredSize = DOLib.Int32FromSpanOffset(span, replaceAtOffset);
@@ -320,8 +344,10 @@ namespace daum
         protected override Int32 thisBlockOffsetOffset => importOffsetOffset;
         protected override Int32 thisBlockRecordCountOffset => importCountOffset;
 
-        protected override string AddOperation(ref Span<byte> span, List<string> args, int addAtOffset)
+        protected override string AddOperation(ref Span<byte> span, List<string> args, int addAtOffset, out bool useStandardBackup)
         {
+            useStandardBackup = true;
+
             Int32 package = GetNameIndex(span, args).Value;
             Int32 _class = GetNameIndex(span, args).Value;
             Int32 outerIndex = GetImportIndex(span, args).Value;
@@ -332,8 +358,10 @@ namespace daum
             return $" -i {importDefSize} 1";
         }
 
-        protected override string ReplaceOperation(ref Span<byte> span, List<string> args, int replaceAtOffset)
+        protected override string ReplaceOperation(ref Span<byte> span, List<string> args, int replaceAtOffset, out bool useStandardBackup)
         {
+            useStandardBackup = true;
+
             Int32? package = GetNameIndex(span, args);
             Int32? _class = GetNameIndex(span, args);
             Int32? outerIndex = GetImportIndex(span, args);
@@ -405,25 +433,72 @@ namespace daum
         private static Int32 relativeSuperOffset = 4;
         private static Int32 relativeTemlateOffset = 8;
         private static Int32 relativeOuterOffset = 12;
-        private static Int32 relativeObjectNameOffset = 16;
+        private static Int32 relativeObjectNameOffset = exportNameOffset;
         private static Int32 relativeObjectFlagsOffset = 24;
         private static Int32 relativeSerialSizeOffset = 28;
         private static Int32 relativeSerialOffsetOffset = 36;
         private static Int32 relativeOtherDataOffset = 44;
 
         private static int otherDataInt32Count = 15;
-        private static Int32 exportDefinitionSize = 104;
+        private static Int32 exportDefinitionSize = exportDefSize;
+
+        private static Int32 headerSizeOffset = 24;
 
         protected override int nextBlockOffsetOffset => dependsOffsetOffset;
 
         protected override int thisBlockOffsetOffset => exportOffsetOffset;
         protected override int thisBlockRecordCountOffset => exportCountOffset;
 
-        protected override string AddOperation(ref Span<byte> span, List<string> args, int addAtOffset)
+        protected override string AddOperation(ref Span<byte> span, List<string> args, int addAtOffset, out bool useStandardBackup)
         {
+            useStandardBackup = false;
+
             Int32 _class = GetImportIndex(span, args).Value;
             Int32 super = Int32.Parse(args.TakeArg());
             Int32 template = GetImportIndex(span, args).Value;
+            Int32 outer = GetExportIndex(span, args).Value;
+            Int32 name = GetNameIndex(span, args).Value;
+            Int32 nameAug = Int32.Parse(args.TakeArg());
+            Int32 flags = Int32.Parse(args.TakeArg());
+
+            Int32 serialOffset = DOLib.Int32FromSpanOffset(span, addAtOffset - exportDefSize + relativeSerialOffsetOffset) +
+                DOLib.Int32FromSpanOffset(span, addAtOffset - exportDefSize + relativeSerialSizeOffset);
+            List<Int32> other = new List<int>();
+            for (int i = 0; i < otherDataInt32Count; i++)
+            {
+                other.Add(Int32.Parse(args.TakeArg()));
+            }
+
+            span = Insert(span, MakeExportDef(_class, super, template, outer, name, nameAug, flags, 0, serialOffset, other), addAtOffset);
+
+            if (File.Exists(Program.runData.fileName + ".AddExportDefBackup")) File.Delete(Program.runData.fileName + ".AddExportDefBackup");
+            Directory.Move(Program.runData.fileName, Program.runData.fileName + ".AddExportDefBackup");
+
+            File.WriteAllBytes(Program.runData.fileName, span.ToArray());
+            Program.CallOffSetterWithArgs(" -edef 104 1 -r -m");
+
+            span = File.ReadAllBytes(Program.runData.fileName);
+
+            string uexpName = Program.runData.fileName.Substring(0, Program.runData.fileName.LastIndexOf('.')) + "uexp";
+            Span<byte> uexp = File.ReadAllBytes(uexpName);
+
+            Int32 newExportSerialOffset = DOLib.Int32FromSpanOffset(span, addAtOffset + relativeSerialOffsetOffset);
+            Int32 newExportFileOffset = newExportSerialOffset - DOLib.Int32FromSpanOffset(span, headerSizeOffset);
+
+            Span<byte> stubExport = new Span<byte>(new byte[8]);
+            DOLib.WriteInt32IntoOffset(stubExport, FindNameIndex(span, "None").Value, 0);
+            uexp = Insert(uexp, stubExport, newExportFileOffset);
+
+            if (File.Exists(uexpName + ".AddStubExportBackup")) File.Delete(uexpName + ".AddStubExportBackup");
+            File.Move(uexpName, uexpName + ".AddStubExportBackup");
+
+            File.WriteAllBytes(uexpName, uexp.ToArray());
+
+            Program.CallOffSetterWithArgs($" -e 8 {newExportSerialOffset} -r -m");
+
+            span = File.ReadAllBytes(Program.runData.fileName);
+
+            return "";
         }
 
         protected override int? FindByIndex(Span<byte> span, List<string> args, int mapOffset, int mapRecordsCount)
@@ -436,7 +511,7 @@ namespace daum
             throw new NotImplementedException();
         }
 
-        protected override string ReplaceOperation(ref Span<byte> span, List<string> args, int replaceAtOffset)
+        protected override string ReplaceOperation(ref Span<byte> span, List<string> args, int replaceAtOffse, out bool useStandardBackupt)
         {
             throw new NotImplementedException();
         }
@@ -456,7 +531,7 @@ namespace daum
         /// <param name="other">other is assumed to be 15 elements, less elements will cause exception!</param>
         /// <returns>Span with ExportDefinition </returns>
         private static Span<byte> MakeExportDef(Int32 _class, Int32 super, Int32 template, Int32 outer, Int32 name, Int32 nameAug, Int32 flags,
-            Int32 size, Int32 serialOffset, Int32[] other)
+            Int32 size, Int32 serialOffset, List<Int32> other)
         {
             Span<byte> result = new Span<byte>(new byte[exportDefinitionSize]);
 

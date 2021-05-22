@@ -11,7 +11,6 @@ namespace daum
     class Program
     {
         private static string configPath;
-        private static string toolDir;
 
         private static string exitCommand = "exit";
         private static string printNullConfigCommand = "nullConfig";
@@ -24,17 +23,26 @@ namespace daum
         };
 
         public static RunData runData;
-        private static Config config;
+        public static Config config;
 
         static void Main(string[] args)
         {
-            toolDir = Assembly.GetExecutingAssembly().Location;
+            string toolDir = Assembly.GetExecutingAssembly().Location;
             toolDir = toolDir.Substring(0, toolDir.LastIndexOf('\\') + 1);
+
+            string fileName = GetFileName(args);
+
+            runData = new RunData()
+            {
+                toolDir = toolDir,
+                fileName = fileName,
+                fileDir = fileName.Substring(0, fileName.LastIndexOf('\\') + 1)
+            };
+
             configPath = toolDir + "Config.json";
 
             //Console.WriteLine(configPath);
             config = GetConfig();
-            runData = ProcessArgs(args);
 
             //Console.WriteLine(config.offsetterPath);
 
@@ -100,22 +108,20 @@ namespace daum
 
         private static void WriteConfig(Config config, string fileName)
         {
-            File.WriteAllText(toolDir + "NullConfig.json", JsonConvert.SerializeObject(config, new JsonSerializerSettings()
+            File.WriteAllText(runData.toolDir + "NullConfig.json", JsonConvert.SerializeObject(config, new JsonSerializerSettings()
             {
                 Formatting = Formatting.Indented
             }));
         }
 
-        private static RunData ProcessArgs(string[] args)
+        private static string GetFileName(string[] args)
         {
-            RunData runData = new RunData();
-
             if (args.Length > 0)
             {
-                runData.fileName = args[0];
+                return args[0];
             }
 
-            return runData;
+            return null;
         }
 
         private static bool ProcessCommand(ref Span<byte> span, Config config, RunData runData, List<string> command, out bool doneSomething, out bool parsed)
@@ -150,11 +156,14 @@ namespace daum
 
                     if (operations.ContainsKey(operationKey))
                     {
-                        string offSetterCallArgs = operations[operationKey].ExecuteAndGetOffSetterAgrs(ref span, command);
+                        string offSetterCallArgs = operations[operationKey].ExecuteAndGetOffSetterAgrs(ref span, command, out bool useStandardBackup);
 
-                        if (File.Exists(runData.fileName + ".daum")) File.Delete(runData.fileName + ".daum");
-                        Directory.Move(runData.fileName, runData.fileName + ".daum");
-                        File.WriteAllBytes(runData.fileName, span.ToArray());
+                        if (useStandardBackup)
+                        {
+                            if (File.Exists(runData.fileName + ".daum")) File.Delete(runData.fileName + ".daum");
+                            Directory.Move(runData.fileName, runData.fileName + ".daum");
+                            File.WriteAllBytes(runData.fileName, span.ToArray());
+                        }
 
                         if (offSetterCallArgs != "")
                         {
@@ -173,9 +182,9 @@ namespace daum
             return true;
         }
 
-        public static void CallOffSetterWithArgs(string offSetterCallArgs)
+        public static void CallOffSetterWithArgs(string offSetterCallArgs, string tgtFile = null)
         {
-            Process offSetter = Process.Start(config.offsetterPath, runData.fileName + offSetterCallArgs);
+            Process offSetter = Process.Start(config.offsetterPath, (tgtFile ?? runData.fileName) + offSetterCallArgs);
             offSetter.WaitForExit();
         }
 
@@ -189,10 +198,12 @@ namespace daum
         public record RunData
         {
             public string fileName = "";
+            public string fileDir = "";
+            public string toolDir = "";
         }
 
         [JsonObject]
-        private class Config
+        public class Config
         {
             public string offsetterPath = "";
             public string drgParserPath = "";
