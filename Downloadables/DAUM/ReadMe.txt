@@ -46,7 +46,8 @@ Import Map:
 
 Export Map:
 	-a: Class(import/export) SuperIndex(int) Template(i/e) Outer(i/e) Name(string/index) NameAugmentation(int) Flags(int)
-	and 15 more ints you are supposed to take starting from relative offset of 44 in Export Definition you copy.
+	and 15 more 32-bit (4-byte) ints you are supposed to take starting from relative offset of 44 in Export Definition
+	you use as a source of working values.
 	-r: Not implemented.
 
 Examples:
