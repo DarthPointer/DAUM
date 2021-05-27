@@ -66,7 +66,7 @@ namespace daum
                 {
                     try
                     {
-                        List<string> command = new List<string>(Console.ReadLine().Split(' '));
+                        List<string> command = ParseCommandString(Console.ReadLine());
                         if (command[0].Length > 0)
                         {
                             runLoop = ProcessCommand(ref span, config, runData, command, out bool doneSomething, out bool parsed);
@@ -193,6 +193,82 @@ namespace daum
         {
             Process parser = Process.Start(parserPath, uassetFileName);
             parser.WaitForExit();
+        }
+
+        public static List<string> ParseCommandString(string command)
+        {
+            List<string> result = new List<string>();
+
+            const char escapeChar = '\\';
+            const char spacedArgBracket = '"';
+            const char spaceArgSeparator = ' ';
+
+            string buffer = "";
+            bool isEscSeq = false;
+            bool insideSpacedArgBrackets = false;
+
+            foreach (char c in command)
+            {
+                if (!isEscSeq)
+                {
+                    switch (c)
+                    {
+                        case escapeChar:
+                            isEscSeq = true;
+                            break;
+
+
+                        case spacedArgBracket:
+                            insideSpacedArgBrackets = !insideSpacedArgBrackets;
+                            if (!insideSpacedArgBrackets)
+                            {
+                                result.Add(buffer);
+                                buffer = "";
+                            }
+                            break;
+
+
+                        case spaceArgSeparator:
+                            if (!insideSpacedArgBrackets)
+                            {
+                                result.Add(buffer);
+                                buffer = "";
+                            }
+                            else
+                            {
+                                buffer += c;
+                            }
+                            break;
+
+
+                        default:
+                            buffer += c;
+                            break;
+                    }
+                }
+                else
+                {
+                    switch (c)
+                    {
+                        case escapeChar:
+                            buffer += c;
+                            isEscSeq = false;
+                            break;
+
+                        case spacedArgBracket:
+                            buffer += c;
+                            isEscSeq = false;
+                            break;
+
+                        default:
+                            throw new FormatException($"Escape seq '{escapeChar}{c}' is not supported");
+                    }
+                }
+            }
+
+            result.Add(buffer);
+
+            return result;
         }
 
 
