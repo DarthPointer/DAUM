@@ -1,9 +1,11 @@
 You MUST have Offseter tool 1.3 or higher downloaded for all currently available benefits from automation!
 
 How to use:
-0.0) Open Config.json and change offSetterPath value to absolute filename of OffSetter.exe.
-0.1) Set your DRG Parser installation path to use parse command if you want automation levels grow insane.
-0.2) In case you have configged parser path, you can also set a flag to run re-parsing automatically
+0.0) Rename ExampleConfig.json to Config.json if you don't have Config.json yet. If you do,
+check if Example contains any new fileds introduced you might want to add in Config.
+0.1) Open Config.json and change offSetterPath value to absolute filename of OffSetter.exe.
+0.2) Set your DRG Parser installation path to use parse command if you want automation levels grow insane.
+0.3) In case you have configged parser path, you can also set a flag to run re-parsing automatically
 after each change you made by DAUM. How far are we from getting a DIY IDE?
 
 Interactive mode:
@@ -79,5 +81,9 @@ have augmentation after it!
 
 Auxiliary commands:
 nullconfig: Creates NullConfig.json with all fields you must/can fill in case you broke your config.
+
 parse: Call DRG Parser to parse current file (if its path is configged, exception otherwise).
+
 -o: Passes current file name to OffSetter with all the arguments you add further.
+
+exit: Exit.
