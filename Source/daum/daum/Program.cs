@@ -231,8 +231,11 @@ namespace daum
                         case spaceArgSeparator:
                             if (!insideSpacedArgBrackets)
                             {
-                                result.Add(buffer);
-                                buffer = "";
+                                if (buffer != "")
+                                {
+                                    result.Add(buffer);
+                                    buffer = "";
+                                }
                             }
                             else
                             {
