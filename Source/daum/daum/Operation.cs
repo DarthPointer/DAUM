@@ -7,6 +7,32 @@ namespace daum
 {
     public abstract class Operation
     {
+        protected static string byIndexKey = "-i";
+        protected static string indexOfExportKey = "-e";
+
+        protected static Int32 nameOffsetOffset = 45;
+        protected static Int32 nameCountOffset = 41;
+
+        protected static Int32 importOffsetOffset = 69;
+        protected static Int32 importCountOffset = 65;
+
+        protected static Int32 importNameOffset = 20;
+        protected static Int32 importDefSize = 28;
+
+        protected static Int32 exportOffsetOffset = 61;
+        protected static Int32 exportCountOffset = 57;
+
+        protected static Int32 exportNameOffset = 16;
+        protected static Int32 exportDefSize = 104;
+
+        protected static Int32 exportSerialOffsetOffset = 36;
+
+        protected static Int32 dependsOffsetOffset = 73;
+
+        protected static Int32 stringSizeDesignationSize = 4;
+
+        protected static Int32 headerSizeOffset = 24;
+
         public abstract string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool useStandardBackup);
 
         protected static Span<byte> Insert(Span<byte> span, Span<byte> insert, Int32 offset)
@@ -46,86 +72,6 @@ namespace daum
 
             return bytes;
         }
-    }
-
-    public class OffSetterCall : Operation
-    {
-        public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool useStandardBackup)
-        {
-            useStandardBackup = false;
-            Program.CallOffSetterWithArgs(' ' + string.Join(' ', args));
-            span = File.ReadAllBytes(Program.runData.fileName);
-            return "";
-        }
-    }
-
-    public abstract class MapOperation : Operation
-    {
-        private static string addOpKey = "-a";
-        private static string replaceKey = "-r";
-        protected static string byIndexKey = "-i";
-        protected static string skipKey = "-s";
-        protected static string indexOfExportKey = "-e";
-
-        protected static Int32 nameOffsetOffset = 45;
-        protected static Int32 nameCountOffset = 41;
-
-        protected static Int32 importOffsetOffset = 69;
-        protected static Int32 importCountOffset = 65;
-
-        protected static Int32 importNameOffset = 20;
-        protected static Int32 importDefSize = 28;
-
-        protected static Int32 exportOffsetOffset = 61;
-        protected static Int32 exportCountOffset = 57;
-
-        protected static Int32 exportNameOffset = 16;
-        protected static Int32 exportDefSize = 104;
-
-        protected static Int32 dependsOffsetOffset = 73;
-
-        protected static Int32 stringSizeDesignationSize = 4;
-
-        protected abstract Int32 nextBlockOffsetOffset { get; }
-        protected abstract Int32 thisBlockOffsetOffset { get; }
-        protected abstract Int32 thisBlockRecordCountOffset { get; }
-
-        public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool useStandardBackup)
-        {
-            string opKey = args.TakeArg();
-            if (opKey == addOpKey)
-            {
-                return AddOperation(ref span, args, DOLib.Int32FromSpanOffset(span, nextBlockOffsetOffset), out useStandardBackup);
-            }
-            if (opKey == replaceKey)
-            {
-                Int32? replaceOffset;
-                if (args[0] == byIndexKey)
-                {
-                    args.TakeArg();
-                    replaceOffset = FindByIndex(span, args,
-                        DOLib.Int32FromSpanOffset(span, thisBlockOffsetOffset), DOLib.Int32FromSpanOffset(span, thisBlockRecordCountOffset));
-                }
-                else
-                {
-                    replaceOffset = FindByName(span, args,
-                        DOLib.Int32FromSpanOffset(span, thisBlockOffsetOffset), DOLib.Int32FromSpanOffset(span, thisBlockRecordCountOffset));
-                }
-
-                if (replaceOffset.HasValue) return ReplaceOperation(ref span, args, replaceOffset.Value, out useStandardBackup);
-                else throw new KeyNotFoundException("Key specifying record to replace is not present in a map");
-            }
-
-            throw new ArgumentException("Arguments are invalid for replacement operation");
-        }
-
-        protected abstract Int32? FindByName(Span<byte> span, List<string> args, Int32 mapOffset, Int32 mapRecordsCount);
-
-        protected abstract Int32? FindByIndex(Span<byte> span, List<string> args, Int32 mapOffset, Int32 mapRecordsCount);
-
-        protected abstract string ReplaceOperation(ref Span<byte> span, List<string> args, Int32 replaceAtOffset, out bool useStandardBackup);
-
-        protected abstract string AddOperation(ref Span<byte> span, List<string> args, Int32 addAtOffset, out bool useStandardBackup);
 
         protected static string StringFromNameDef(Span<byte> span, Int32 offset)
         {
@@ -275,6 +221,65 @@ namespace daum
                 return GetImportIndex(span, args);
             }
         }
+    }
+
+    public class OffSetterCall : Operation
+    {
+        public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool useStandardBackup)
+        {
+            useStandardBackup = false;
+            Program.CallOffSetterWithArgs(' ' + string.Join(' ', args));
+            span = File.ReadAllBytes(Program.runData.fileName);
+            return "";
+        }
+    }
+
+    public abstract class MapOperation : Operation
+    {
+        private static string addOpKey = "-a";
+        private static string replaceKey = "-r";
+        protected static string skipKey = "-s";
+
+        protected abstract Int32 nextBlockOffsetOffset { get; }
+        protected abstract Int32 thisBlockOffsetOffset { get; }
+        protected abstract Int32 thisBlockRecordCountOffset { get; }
+
+        public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool useStandardBackup)
+        {
+            string opKey = args.TakeArg();
+            if (opKey == addOpKey)
+            {
+                return AddOperation(ref span, args, DOLib.Int32FromSpanOffset(span, nextBlockOffsetOffset), out useStandardBackup);
+            }
+            if (opKey == replaceKey)
+            {
+                Int32? replaceOffset;
+                if (args[0] == byIndexKey)
+                {
+                    args.TakeArg();
+                    replaceOffset = FindByIndex(span, args,
+                        DOLib.Int32FromSpanOffset(span, thisBlockOffsetOffset), DOLib.Int32FromSpanOffset(span, thisBlockRecordCountOffset));
+                }
+                else
+                {
+                    replaceOffset = FindByName(span, args,
+                        DOLib.Int32FromSpanOffset(span, thisBlockOffsetOffset), DOLib.Int32FromSpanOffset(span, thisBlockRecordCountOffset));
+                }
+
+                if (replaceOffset.HasValue) return ReplaceOperation(ref span, args, replaceOffset.Value, out useStandardBackup);
+                else throw new KeyNotFoundException("Key specifying record to replace is not present in a map");
+            }
+
+            throw new ArgumentException("Arguments are invalid for replacement operation");
+        }
+
+        protected abstract Int32? FindByName(Span<byte> span, List<string> args, Int32 mapOffset, Int32 mapRecordsCount);
+
+        protected abstract Int32? FindByIndex(Span<byte> span, List<string> args, Int32 mapOffset, Int32 mapRecordsCount);
+
+        protected abstract string ReplaceOperation(ref Span<byte> span, List<string> args, Int32 replaceAtOffset, out bool useStandardBackup);
+
+        protected abstract string AddOperation(ref Span<byte> span, List<string> args, Int32 addAtOffset, out bool useStandardBackup);
     }
 
     public class NameDefOperation : MapOperation
@@ -458,13 +463,11 @@ namespace daum
         private static Int32 relativeObjectNameOffset = exportNameOffset;
         private static Int32 relativeObjectFlagsOffset = 24;
         private static Int32 relativeSerialSizeOffset = 28;
-        private static Int32 relativeSerialOffsetOffset = 36;
+        private static Int32 relativeSerialOffsetOffset = exportSerialOffsetOffset;
         private static Int32 relativeOtherDataOffset = 44;
 
         private static int otherDataInt32Count = 15;
         private static Int32 exportDefinitionSize = exportDefSize;
-
-        private static Int32 headerSizeOffset = 24;
 
         protected override int nextBlockOffsetOffset => dependsOffsetOffset;
 

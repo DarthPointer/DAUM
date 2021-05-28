@@ -20,7 +20,8 @@ namespace daum
             { "-n", new NameDefOperation() },
             { "-i", new ImportDefOperation() },
             { "-edef", new ExportDefOperation() },
-            { "-o", new OffSetterCall() }
+            { "-o", new OffSetterCall() },
+            { "-eread", new ExportReadOperation() }
         };
 
         public static RunData runData;
