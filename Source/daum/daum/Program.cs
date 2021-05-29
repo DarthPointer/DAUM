@@ -128,7 +128,6 @@ namespace daum
 
         private static bool ProcessCommand(ref Span<byte> span, Config config, RunData runData, List<string> command, out bool doneSomething, out bool parsed)
         {
-            doneSomething = true;
             parsed = false;
 
             if (command.Count > 0)
@@ -144,6 +143,7 @@ namespace daum
                     if (command[0] == printNullConfigCommand)
                     {
                         WriteConfig(new Config(), "NullConfig.json");
+                        doneSomething = false;
                         return true;
                     }
 
@@ -151,6 +151,7 @@ namespace daum
                     {
                         ParseFilesWithDRGPareser(config.drgParserPath, runData.fileName);
                         parsed = true;
+                        doneSomething = false;
                         return true;
                     }
 
@@ -158,7 +159,7 @@ namespace daum
 
                     if (operations.ContainsKey(operationKey))
                     {
-                        string offSetterCallArgs = operations[operationKey].ExecuteAndGetOffSetterAgrs(ref span, command, out bool useStandardBackup);
+                        string offSetterCallArgs = operations[operationKey].ExecuteAndGetOffSetterAgrs(ref span, command, out doneSomething, out bool useStandardBackup);
 
                         if (useStandardBackup)
                         {

@@ -30,10 +30,11 @@ namespace daum
         protected static Int32 dependsOffsetOffset = 73;
 
         protected static Int32 stringSizeDesignationSize = 4;
+        protected static Int32 nameHashesSize = 4;
 
         protected static Int32 headerSizeOffset = 24;
 
-        public abstract string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool useStandardBackup);
+        public abstract string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool doneSomething, out bool useStandardBackup);
 
         protected static Span<byte> Insert(Span<byte> span, Span<byte> insert, Int32 offset)
         {
@@ -71,6 +72,35 @@ namespace daum
             }
 
             return bytes;
+        }
+
+        protected static Int32? FindNameDefOffset(Span<byte> span, Int32 index)
+        {
+            if (index < DOLib.Int32FromSpanOffset(span, nameCountOffset))
+            {
+                Int32 currentNameOffset = DOLib.Int32FromSpanOffset(span, nameOffsetOffset);
+
+                for (Int32 currentIndex = 0; currentIndex < index; currentIndex++)
+                {
+                    currentNameOffset += DOLib.Int32FromSpanOffset(span, currentNameOffset) + 8;
+                }
+
+                return currentNameOffset;
+            }
+
+            return null;
+        }
+
+        protected static string NameString(Span<byte> span, Int32 index)
+        {
+            Int32 currentNameOffset = DOLib.Int32FromSpanOffset(span, nameOffsetOffset);
+
+            for (Int32 currentIndex = 0; currentIndex < index; currentIndex++)
+            {
+                currentNameOffset += DOLib.Int32FromSpanOffset(span, currentNameOffset) + stringSizeDesignationSize + nameHashesSize;
+            }
+
+            return StringFromNameDef(span, currentNameOffset);
         }
 
         protected static string StringFromNameDef(Span<byte> span, Int32 offset)
@@ -124,6 +154,25 @@ namespace daum
             }
         }
 
+        protected static Int32? FindImportDefOffset(Span<byte> span, Int32 index)
+        {
+            index = -1 * index - 1;
+
+            if (index < DOLib.Int32FromSpanOffset(span, importCountOffset))
+            {
+                Int32 currentImportOffset = DOLib.Int32FromSpanOffset(span, importOffsetOffset);
+
+                for (Int32 currentIndex = 0; currentIndex < index; currentIndex++)
+                {
+                    currentImportOffset += importDefSize;
+                }
+
+                return currentImportOffset;
+            }
+
+            return null;
+        }
+
         protected static Int32? GetImportIndex(Span<byte> span, List<string> args)
         {
             string arg0 = args.TakeArg();
@@ -167,6 +216,25 @@ namespace daum
             return DOLib.Int32FromSpanOffset(span, offset + importNameOffset);
         }
 
+        protected static Int32? FindExportDefOffset(Span<byte> span, Int32 index)
+        {
+            index -= 1;
+
+            if (index < DOLib.Int32FromSpanOffset(span, exportCountOffset))
+            {
+                Int32 currentExportDefOffset = DOLib.Int32FromSpanOffset(span, exportOffsetOffset);
+
+                for (Int32 currentIndex = 0; currentIndex < index; currentIndex++)
+                {
+                    currentExportDefOffset += exportDefSize;
+                }
+
+                return currentExportDefOffset;
+            }
+
+            return null;
+        }
+
         protected static Int32? GetExportIndex(Span<byte> span, List<string> args)
         {
             string arg0 = args.TakeArg();
@@ -202,6 +270,11 @@ namespace daum
             return null;
         }
 
+        protected static Int32 NameIndexFromExportDef(Span<byte> span, Int32 offset)
+        {
+            return DOLib.Int32FromSpanOffset(span, offset + exportNameOffset);
+        }
+
         protected static Int32? GetImportExportIndex(Span<byte> span, List<string> args)
         {
             string arg0 = args[0];
@@ -225,9 +298,11 @@ namespace daum
 
     public class OffSetterCall : Operation
     {
-        public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool useStandardBackup)
+        public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool doneSomething, out bool useStandardBackup)
         {
             useStandardBackup = false;
+            doneSomething = true;
+
             Program.CallOffSetterWithArgs(' ' + string.Join(' ', args));
             span = File.ReadAllBytes(Program.runData.fileName);
             return "";
@@ -244,8 +319,10 @@ namespace daum
         protected abstract Int32 thisBlockOffsetOffset { get; }
         protected abstract Int32 thisBlockRecordCountOffset { get; }
 
-        public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool useStandardBackup)
+        public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool doneSomething,  out bool useStandardBackup)
         {
+            doneSomething = true;
+
             string opKey = args.TakeArg();
             if (opKey == addOpKey)
             {
