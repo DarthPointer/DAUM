@@ -22,8 +22,22 @@ namespace daum
 
             { "Skip", SkipPatternElementProcesser },
 
+            { "Int32", IntPatternElementProcesser },
+            { "ByteProp", BytePropPatternElementProcesser },
+            { "Bool", BoolPatternElementProcesser },
             { "Float32", FloatPatternElementProcesser },
+            { "GUID", GUIDPatternElementProcesser },
+
             { "ObjectIndex", ObjectIndexPatternElementProcesser },
+            { "Name", NamePatternElementProcesser },
+
+            { "StructTypeNameIndex", StructTypeNameIndexPatternElementProcesser },
+
+            { "ArrayElementTypeNameIndex", ArrayElementTypeNameIndexPatternElementProcesser },
+            { "ElementCount", ElementCountPatternElementProcesser },
+            { "ArrayRepeat", ArrayRepeatPatternElementProcesser },
+
+            { "SkipIfPatternEnds", SkipIfEndPatternElementProcesser },
 
             { "NTPL", NoneTerminatedPropListPatternElementProcesser }
         };
@@ -49,7 +63,7 @@ namespace daum
                 currentUexpOffset = uexpStructureOffset,
                 declaredSize = uexpStructureSize,
                 declaredSizeStartOffset = uexpStructureOffset,
-                elementsLeft = -1,
+                collectionElementCount = -1,
 
                 pattern = new List<string>() { "NTPL" },
 
@@ -92,7 +106,7 @@ namespace daum
                     currentUexpOffset = readingContext.currentUexpOffset,
                     declaredSize = -1,
                     declaredSizeStartOffset = -1,
-                    elementsLeft = -1,
+                    collectionElementCount = -1,
 
                     pattern = Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"PropertyPatterns/{typeName}")),
 
@@ -100,14 +114,7 @@ namespace daum
                     structCategory = StructCategory.nonExport
                 });
 
-                IncStructLevel();
-
-                StepsTilEndOfStruct(uasset, uexp);
-
-                DecStructLevel();
-
-                readingContext.currentUexpOffset = machineState.Pop().currentUexpOffset;
-                readingContext.nextStep = NextStep.applyPattern;
+                ExecutePushedReadingContext(uasset, uexp, readingContext);
 
                 return true;
             }
@@ -158,6 +165,24 @@ namespace daum
             readingContext.declaredSizeStartOffset = readingContext.currentUexpOffset;
         }
 
+        private static void IntPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            ReportExportContents($"Int Value: {BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset)}");
+
+            readingContext.currentUexpOffset += 4;
+        }
+
+        private static void BoolPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            ReportExportContents($"Bool Value: {BitConverter.ToBoolean(uexp.ToArray(), readingContext.currentUexpOffset)}");
+
+            readingContext.currentUexpOffset += 1;
+        }
+
         private static void FloatPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
@@ -165,6 +190,127 @@ namespace daum
             ReportExportContents($"Float Value: {BitConverter.ToSingle(uexp.ToArray(), readingContext.currentUexpOffset)}");
 
             readingContext.currentUexpOffset += 4;
+        }
+
+        private static void GUIDPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            Int32 guid1 = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset);
+            Int32 guid2 = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset + 4);
+            Int32 guid3 = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset + 8);
+            Int32 guid4 = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset + 12);
+
+            ReportExportContents($"GUID: {guid1}-{guid2}-{guid3}-{guid4}");
+
+            readingContext.currentUexpOffset += 16;
+        }
+
+        private static void BytePropPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            ReportExportContents($"8 Bytes Value: {BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset)}");
+
+            readingContext.currentUexpOffset += 8;
+        }
+
+        private static void NamePatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            ReportExportContents($"Name: {FullNameString(uasset, uexp, readingContext.currentUexpOffset)}");
+
+            readingContext.currentUexpOffset += 8;
+        }
+
+        private static void StructTypeNameIndexPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+            string typeName = FullNameString(uasset, uexp, readingContext.currentUexpOffset);
+            ReportExportContents($"Structure Type: {typeName}");
+
+            readingContext.currentUexpOffset += 8;
+
+            if (File.Exists(Program.runData.toolDir + $"StructPatterns/{typeName}"))
+            {
+                readingContext.pattern.AddRange(Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"StructPatterns/{typeName}")));
+            }
+        }
+
+        private static void ArrayElementTypeNameIndexPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            string typeName = FullNameString(uasset, uexp, readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 8;
+
+            ReportExportContents($"Array Element Type: {typeName}");
+
+            if (File.Exists(Program.runData.toolDir + $"BodyPatterns/{typeName}"))
+            {
+                readingContext.pattern.Add("ArrayRepeat");
+                readingContext.pattern.AddRange(Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"BodyPatterns/{typeName}")));
+            }
+        }
+
+        private static void ElementCountPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            Int32 elementCount = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 4;
+
+            readingContext.collectionElementCount = elementCount;
+
+            ReportExportContents($"Elements Count: {elementCount}");
+        }
+
+        private static void ArrayRepeatPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            for (int i = 0; i < readingContext.collectionElementCount; i++)
+            {
+                ReportExportContents($"Element {i}");
+
+                machineState.Push(new ReadingContext()
+                {
+                    currentUexpOffset = readingContext.currentUexpOffset,
+                    pattern = new List<string>(readingContext.pattern),
+
+                    nextStep = NextStep.applyPattern,
+                    structCategory = StructCategory.nonExport
+                });
+
+                ExecutePushedReadingContext(uasset, uexp, readingContext);
+            }
+
+            readingContext.pattern.Clear();
+        }
+
+        private static void ExecutePushedReadingContext(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            IncStructLevel();
+
+            StepsTilEndOfStruct(uasset, uexp);
+
+            DecStructLevel();
+
+            readingContext.currentUexpOffset = machineState.Pop().currentUexpOffset;
+            readingContext.nextStep = NextStep.applyPattern;
+        }
+
+        private static void SkipIfEndPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            if (readingContext.pattern.Count == 0)
+            {
+                readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
+
+                ReportExportContents("Skipping structure due to lack of pattern");
+            }
         }
 
         private static void ObjectIndexPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
@@ -273,7 +419,7 @@ namespace daum
             public Int32 currentUexpOffset;
             public Int32 declaredSize;
             public Int32 declaredSizeStartOffset;
-            public Int32 elementsLeft;
+            public Int32 collectionElementCount;
 
             public List<string> pattern;
 
