@@ -26,6 +26,7 @@ namespace daum
         protected static Int32 exportDefSize = 104;
 
         protected static Int32 exportSerialOffsetOffset = 36;
+        protected static Int32 exportSerialSizeOffset = 28;
 
         protected static Int32 dependsOffsetOffset = 73;
 
@@ -304,7 +305,7 @@ namespace daum
             doneSomething = true;
 
             Program.CallOffSetterWithArgs(' ' + string.Join(' ', args));
-            span = File.ReadAllBytes(Program.runData.fileName);
+            span = File.ReadAllBytes(Program.runData.uassetFileName);
             return "";
         }
     }
@@ -539,7 +540,7 @@ namespace daum
         private static Int32 relativeOuterOffset = 12;
         private static Int32 relativeObjectNameOffset = exportNameOffset;
         private static Int32 relativeObjectFlagsOffset = 24;
-        private static Int32 relativeSerialSizeOffset = 28;
+        private static Int32 relativeSerialSizeOffset = exportSerialSizeOffset;
         private static Int32 relativeSerialOffsetOffset = exportSerialOffsetOffset;
         private static Int32 relativeOtherDataOffset = 44;
 
@@ -573,16 +574,15 @@ namespace daum
 
             span = Insert(span, MakeExportDef(_class, super, template, outer, name, nameAug, flags, 0, serialOffset, other), addAtOffset);
 
-            if (File.Exists(Program.runData.fileName + ".AddExportDefBackup")) File.Delete(Program.runData.fileName + ".AddExportDefBackup");
-            Directory.Move(Program.runData.fileName, Program.runData.fileName + ".AddExportDefBackup");
+            if (File.Exists(Program.runData.uassetFileName + ".AddExportDefBackup")) File.Delete(Program.runData.uassetFileName + ".AddExportDefBackup");
+            Directory.Move(Program.runData.uassetFileName, Program.runData.uassetFileName + ".AddExportDefBackup");
 
-            File.WriteAllBytes(Program.runData.fileName, span.ToArray());
+            File.WriteAllBytes(Program.runData.uassetFileName, span.ToArray());
             Program.CallOffSetterWithArgs(" -edef 104 1 -r -m");
 
-            span = File.ReadAllBytes(Program.runData.fileName);
+            span = File.ReadAllBytes(Program.runData.uassetFileName);
 
-            string uexpName = Program.runData.fileName.Substring(0, Program.runData.fileName.LastIndexOf('.') + 1) + "uexp";
-            Span<byte> uexp = File.ReadAllBytes(uexpName);
+            Span<byte> uexp = File.ReadAllBytes(Program.runData.uexpFileName);
 
             Int32 newExportSerialOffset = DOLib.Int32FromSpanOffset(span, addAtOffset + relativeSerialOffsetOffset);
             Int32 newExportFileOffset = newExportSerialOffset - DOLib.Int32FromSpanOffset(span, headerSizeOffset);
@@ -591,14 +591,14 @@ namespace daum
             DOLib.WriteInt32IntoOffset(stubExport, FindNameIndex(span, "None").Value, 0);
             uexp = Insert(uexp, stubExport, newExportFileOffset);
 
-            if (File.Exists(uexpName + ".AddStubExportBackup")) File.Delete(uexpName + ".AddStubExportBackup");
-            File.Move(uexpName, uexpName + ".AddStubExportBackup");
+            if (File.Exists(Program.runData.uexpFileName + ".AddStubExportBackup")) File.Delete(Program.runData.uexpFileName + ".AddStubExportBackup");
+            File.Move(Program.runData.uexpFileName, Program.runData.uexpFileName + ".AddStubExportBackup");
 
-            File.WriteAllBytes(uexpName, uexp.ToArray());
+            File.WriteAllBytes(Program.runData.uexpFileName, uexp.ToArray());
 
             Program.CallOffSetterWithArgs($" -e 12 {newExportSerialOffset} -r -m");
 
-            span = File.ReadAllBytes(Program.runData.fileName);
+            span = File.ReadAllBytes(Program.runData.uassetFileName);
 
             return "";
         }

@@ -5,17 +5,30 @@ using DRGOffSetterLib;
 
 namespace daum
 {
-    delegate void UexpValRead(Span<byte> uasset, Span<byte> uexp, ref int offset);
-
     public class ExportReadOperation : Operation
     {
+        delegate void PatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext);
+
+        private static int currentStructLevel = 0;
+        private static string structLevelIdent = "  ";
+        private static string currentStructLevelIdent = "";
+
         private static string endOfStructConfigName = "None";
 
-        private static Dictionary<string, UexpValRead> primitiveTyperReaders = new Dictionary<string, UexpValRead>()
+        private static Dictionary<string, PatternElementProcesser> patternElementProcessers = new Dictionary<string, PatternElementProcesser>()
         {
-            { "float32", ReadFloat32Value },
-            { "objectProp", ReadObjectPropValue }
+            { "Size", SizePatternElementProcesser },
+            { "SizeStart", SizeStartPatternElementProcesser },
+
+            { "Skip", SkipPatternElementProcesser },
+
+            { "Float32", FloatPatternElementProcesser },
+            { "ObjectIndex", ObjectIndexPatternElementProcesser },
+
+            { "NTPL", NoneTerminatedPropListPatternElementProcesser }
         };
+
+        private static Stack<ReadingContext> machineState;
 
         public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool doneSomething, out bool useStandardBackup)
         {
@@ -27,43 +40,93 @@ namespace daum
             Int32 fisrtExportOffset = DOLib.Int32FromSpanOffset(span, exportOffsetOffset);
             Int32 uexpStructureOffset = DOLib.Int32FromSpanOffset(span, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportSerialOffsetOffset)
                 - DOLib.Int32FromSpanOffset(span, headerSizeOffset);
+            Int32 uexpStructureSize = DOLib.Int32FromSpanOffset(span, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportSerialSizeOffset);
 
-            ReadProperties(span, File.ReadAllBytes(Program.runData.fileName.Substring(0, Program.runData.fileName.LastIndexOf('.') + 1) + "uexp"),
-                uexpStructureOffset);
+            ResetSLIString();
+            machineState = new Stack<ReadingContext>();
+            machineState.Push(new ReadingContext()
+            {
+                currentUexpOffset = uexpStructureOffset,
+                declaredSize = uexpStructureSize,
+                declaredSizeStartOffset = uexpStructureOffset,
+                elementsLeft = -1,
+
+                pattern = new List<string>() { "NTPL" },
+
+                nextStep = NextStep.substructNameAndType,
+                structCategory = StructCategory.export
+            });
+
+            StepsTilEndOfStruct(span, File.ReadAllBytes(Program.runData.uexpFileName));
 
             return "";
         }
 
-        private static void ReadProperties(Span<byte> uasset, Span<byte> uexp, Int32 offset)
+        private static void StepsTilEndOfStruct(Span<byte> uasset, Span<byte> uexp)
         {
-            while (ReadProperty(uasset, uexp, ref offset)) ;
-
-            return;
+            while (Step(uasset, uexp));
         }
 
-        private static bool ReadProperty(Span<byte> uasset, Span<byte> uexp, ref Int32 offset)
+        private static bool Step(Span<byte> uasset, Span<byte> uexp)
         {
-            string propertyName = ReadNameForm(uasset, uexp, ref offset);
+            ReadingContext readingContext = machineState.Peek();
 
-            if (propertyName == endOfStructConfigName)
+            if (readingContext.nextStep == NextStep.substructNameAndType)
             {
-                offset += 4;
-                return false;
+                string substructName = FullNameString(uasset, uexp, readingContext.currentUexpOffset);
+                readingContext.currentUexpOffset += 8;
+
+                if (substructName == endOfStructConfigName)
+                {
+                    return false;
+                }
+
+                string typeName = FullNameString(uasset, uexp, readingContext.currentUexpOffset);
+                readingContext.currentUexpOffset += 8;
+
+                ReportExportContents("------------------------------");
+                ReportExportContents($"{substructName} is {typeName}");
+
+                machineState.Push(new ReadingContext()
+                {
+                    currentUexpOffset = readingContext.currentUexpOffset,
+                    declaredSize = -1,
+                    declaredSizeStartOffset = -1,
+                    elementsLeft = -1,
+
+                    pattern = Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"PropertyPatterns/{typeName}")),
+
+                    nextStep = NextStep.applyPattern,
+                    structCategory = StructCategory.nonExport
+                });
+
+                IncStructLevel();
+
+                StepsTilEndOfStruct(uasset, uexp);
+
+                DecStructLevel();
+
+                readingContext.currentUexpOffset = machineState.Pop().currentUexpOffset;
+                readingContext.nextStep = NextStep.applyPattern;
+
+                return true;
             }
 
-            string typeName = ReadNameForm(uasset, uexp, ref offset);
-
-            Console.WriteLine("-----------------------------");
-            Console.WriteLine($"{propertyName} is {typeName}");
-
-            string propertyPatternFilename = Program.runData.toolDir + $"PropertyPatterns\\{ typeName }";
-            if (File.Exists(propertyPatternFilename))
+            if (readingContext.nextStep == NextStep.applyPattern)
             {
-                string patternString = File.ReadAllText(propertyPatternFilename);
-                List<string> parsedPattern = Program.ParseCommandString(patternString);
-                while (parsedPattern.Count > 0)
+                if (readingContext.pattern.Count == 0)
                 {
-                    PatternElementRead(uasset, uexp, ref offset, parsedPattern);
+                    return false;
+                }
+
+                if (patternElementProcessers.ContainsKey(readingContext.pattern[0]))
+                {
+                    patternElementProcessers[readingContext.pattern[0]](uasset, uexp, readingContext);
+                }
+                else
+                {
+                    readingContext.currentUexpOffset += 4;
+                    readingContext.pattern.TakeArg();
                 }
 
                 return true;
@@ -72,72 +135,162 @@ namespace daum
             return false;
         }
 
-        private static string ReadNameForm(Span<byte> uasset, Span<byte> uexp, ref Int32 offset)
+        private static void SizePatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
         {
-            string nameString = NameString(uasset, DOLib.Int32FromSpanOffset(uexp, offset));
-            offset += 4;
-            Int32 nameAug = DOLib.Int32FromSpanOffset(uexp, offset);
-            offset += 4;
+            readingContext.declaredSize = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 4;
+            readingContext.pattern.TakeArg();
 
+            ReportExportContents($"Size: {readingContext.declaredSize}");
+        }
+
+        private static void SkipPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            readingContext.currentUexpOffset += Int32.Parse(readingContext.pattern.TakeArg());
+        }
+
+        private static void SizeStartPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+            
+            readingContext.declaredSizeStartOffset = readingContext.currentUexpOffset;
+        }
+
+        private static void FloatPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            ReportExportContents($"Float Value: {BitConverter.ToSingle(uexp.ToArray(), readingContext.currentUexpOffset)}");
+
+            readingContext.currentUexpOffset += 4;
+        }
+
+        private static void ObjectIndexPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            Int32 index = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset);
+
+            readingContext.currentUexpOffset += 4;
+
+            string valueStr;
+
+            if (index == 0)
+            {
+                valueStr = "null";
+            }
+            else if (index < 0)
+            {
+                valueStr = ImportByIndexFullNameString(uasset, uexp, index);
+            }
+            else
+            {
+                valueStr = ExportByIndexFullNameString(uasset, uexp, index);
+            }
+
+            ReportExportContents($"Object: {valueStr}");
+        }
+
+        private static void NoneTerminatedPropListPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            if (FullNameString(uasset, uexp, readingContext.currentUexpOffset) != endOfStructConfigName)
+            {
+                readingContext.nextStep = NextStep.substructNameAndType;
+            }
+            else
+            {
+                readingContext.pattern.TakeArg();
+            }
+        }
+
+        private static void IncStructLevel()
+        {
+            currentStructLevel++;
+
+            UpdateCurrentSLIString();
+        }
+
+        private static void DecStructLevel()
+        {
+            currentStructLevel--;
+
+            UpdateCurrentSLIString();
+        }
+
+        private static void UpdateCurrentSLIString()
+        {
+            currentStructLevelIdent = "";
+
+            for (int i = 0; i < currentStructLevel; i++)
+            {
+                currentStructLevelIdent += structLevelIdent;
+            }
+        }
+
+        private static void ResetSLIString()
+        {
+            currentStructLevel = 0;
+            currentStructLevelIdent = "";
+        }
+
+        private static string FullNameString(Span<byte> uasset, Span<byte> tgtFile, Int32 uexpOffset)
+        {
+            Int32 nameIndex = BitConverter.ToInt32(tgtFile.ToArray(), uexpOffset);
+            string nameString = NameString(uasset, nameIndex);
+
+            Int32 nameAug = BitConverter.ToInt32(tgtFile.ToArray(), uexpOffset + 4);
             if (nameAug != 0)
             {
-                nameString += $"_{ nameAug }";
+                nameString += $"_{nameAug}";
             }
 
             return nameString;
         }
 
-        private static void PatternElementRead(Span<byte> uasset, Span<byte> uexp, ref Int32 offset, List<string> patternArgs)
+        private static string ImportByIndexFullNameString(Span<byte> uasset, Span<byte> uexp, Int32 importIndex)
         {
-            const string skipPattern = "skip";
-
-            string patternElement = patternArgs.TakeArg();
-
-            if (patternElement == skipPattern)
-            {
-                offset += Int32.Parse(patternArgs.TakeArg());
-                return;
-            }
-            else if (primitiveTyperReaders.ContainsKey(patternElement))
-            {
-                primitiveTyperReaders[patternElement](uasset, uexp, ref offset);
-                return;
-            }
-            else
-            {
-                offset += 4;
-                return;
-            }
+            importIndex = -1*importIndex - 1;
+            Int32 firstImportOffset = BitConverter.ToInt32(uasset.ToArray(), importOffsetOffset);
+            return FullNameString(uasset, uasset, firstImportOffset + importIndex * importDefSize + importNameOffset);
         }
 
-        private static void ReadFloat32Value(Span<byte> uasset, Span<byte> uexp, ref Int32 offset)
+        private static string ExportByIndexFullNameString(Span<byte> uasset, Span<byte> uexp, Int32 exportIndex)
         {
-            Span<byte> scope = uexp.Slice(offset, 4);
-            offset += 4;
-
-            Console.WriteLine($"Float Value {BitConverter.ToSingle(scope)}");
+            exportIndex = exportIndex - 1;
+            Int32 firstExportOffset = BitConverter.ToInt32(uasset.ToArray(), exportOffsetOffset);
+            return FullNameString(uasset, uasset, firstExportOffset + exportIndex * exportDefSize + exportNameOffset);
         }
 
-        private static void ReadObjectPropValue(Span<byte> uasset, Span<byte> uexp, ref Int32 offset)
+        private static void ReportExportContents(string message)
         {
-            Span<byte> scope = uexp.Slice(offset, 4);
-            offset += 4;
+            Console.WriteLine(currentStructLevelIdent + message);
+        }
 
-            Int32 index = BitConverter.ToInt32(scope);
+        private class ReadingContext
+        {
+            public Int32 currentUexpOffset;
+            public Int32 declaredSize;
+            public Int32 declaredSizeStartOffset;
+            public Int32 elementsLeft;
 
-            if (index == 0)
-            {
-                Console.WriteLine("ObjectProperty is null");
-                return;
-            }
-            else if (index > 0)
-            {
-                Console.WriteLine($"ObjectProperty Value Export:{NameString(uasset, NameIndexFromExportDef(uasset, FindExportDefOffset(uasset, index).Value))}");
-            }
-            else
-            {
-                Console.WriteLine($"ObjectProperty Value Import:{NameString(uasset, NameIndexFromImportDef(uasset, FindImportDefOffset(uasset, index).Value))}");
-            }
+            public List<string> pattern;
+
+            public NextStep nextStep;
+            public StructCategory structCategory;
+        }
+
+        private enum NextStep
+        {
+            substructNameAndType,
+            applyPattern
+        }
+
+        private enum StructCategory
+        {
+            export,
+            nonExport
         }
     }
 }

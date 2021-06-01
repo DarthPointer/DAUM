@@ -37,7 +37,8 @@ namespace daum
             runData = new RunData()
             {
                 toolDir = toolDir,
-                fileName = fileName,
+                uassetFileName = fileName,
+                uexpFileName = fileName.Substring(0, fileName.LastIndexOf('.') + 1) + "uexp",
                 fileDir = fileName.Substring(0, fileName.LastIndexOf('\\') + 1)
             };
 
@@ -48,9 +49,9 @@ namespace daum
 
             //Console.WriteLine(config.offsetterPath);
 
-            if (runData.fileName.Length > 0)
+            if (runData.uassetFileName.Length > 0)
             {
-                Span<byte> span = File.ReadAllBytes(runData.fileName);
+                Span<byte> span = File.ReadAllBytes(runData.uassetFileName);
 
                 if (args.Length > 1)
                 {
@@ -59,7 +60,7 @@ namespace daum
                 }
 
                 Console.WriteLine($"Drg Automation Utility for Modding welcomes you!");
-                Console.WriteLine($"Entered interactive mode for file {runData.fileName}");
+                Console.WriteLine($"Entered interactive mode for file {runData.uassetFileName}");
                 Console.WriteLine();
 
                 bool runLoop = true;
@@ -73,7 +74,7 @@ namespace daum
                             runLoop = ProcessCommand(ref span, config, runData, command, out bool doneSomething, out bool parsed);
                             if (doneSomething)
                             {
-                                if (config.autoParseAfterSuccess && !parsed) ParseFilesWithDRGPareser(config.drgParserPath, runData.fileName);
+                                if (config.autoParseAfterSuccess && !parsed) ParseFilesWithDRGPareser(config.drgParserPath, runData.uassetFileName);
 
                                 Console.WriteLine("Done!");
                             }
@@ -149,7 +150,7 @@ namespace daum
 
                     if (command[0] == parseCommand)
                     {
-                        ParseFilesWithDRGPareser(config.drgParserPath, runData.fileName);
+                        ParseFilesWithDRGPareser(config.drgParserPath, runData.uassetFileName);
                         parsed = true;
                         doneSomething = false;
                         return true;
@@ -163,9 +164,9 @@ namespace daum
 
                         if (useStandardBackup)
                         {
-                            if (File.Exists(runData.fileName + ".daum")) File.Delete(runData.fileName + ".daum");
-                            Directory.Move(runData.fileName, runData.fileName + ".daum");
-                            File.WriteAllBytes(runData.fileName, span.ToArray());
+                            if (File.Exists(runData.uassetFileName + ".daum")) File.Delete(runData.uassetFileName + ".daum");
+                            Directory.Move(runData.uassetFileName, runData.uassetFileName + ".daum");
+                            File.WriteAllBytes(runData.uassetFileName, span.ToArray());
                         }
 
                         if (offSetterCallArgs != "")
@@ -173,7 +174,7 @@ namespace daum
                             CallOffSetterWithArgs(offSetterCallArgs + " -m -r");
                         }
 
-                        span = File.ReadAllBytes(runData.fileName);
+                        span = File.ReadAllBytes(runData.uassetFileName);
 
                         return true;
                     }
@@ -187,7 +188,7 @@ namespace daum
 
         public static void CallOffSetterWithArgs(string offSetterCallArgs, string tgtFile = null)
         {
-            Process offSetter = Process.Start(config.offsetterPath, (tgtFile ?? runData.fileName) + offSetterCallArgs);
+            Process offSetter = Process.Start(config.offsetterPath, (tgtFile ?? runData.uassetFileName) + offSetterCallArgs);
             offSetter.WaitForExit();
         }
 
@@ -279,7 +280,8 @@ namespace daum
 
         public record RunData
         {
-            public string fileName = "";
+            public string uassetFileName = "";
+            public string uexpFileName = "";
             public string fileDir = "";
             public string toolDir = "";
         }
