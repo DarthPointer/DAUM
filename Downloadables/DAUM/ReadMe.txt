@@ -23,7 +23,7 @@ and T5.FastReload mods.
 Edited file is saved under name of the original one. .offset and .daum and otherfiles are backups created after each command changing anything.
 
 Commands:
-[block] [operation] [operation params]
+Uasset map commands are: [block] [operation] [operation params]
 
 Block: -i for Import Map, -n for Name Map, -edef for export map.
 Operation: -a to add at the end of map, -r to replace record, -edef does not support -r as of now.
@@ -78,6 +78,12 @@ flags, so these are imports' ObjectName strings.
 
 [-e Default__STE_Revolver_Neurotoxin_C 0] is another import/export, this time it is an export. Remember export name must
 have augmentation after it!
+
+Parser Funcionality:
+
+-eread [export]
+
+export is eiter -i index or name with aug (like Upgradable 0). DO NOT SKIP THE AUG EVEN IF IT IS ZERO!
 
 Auxiliary commands:
 nullconfig: Creates NullConfig.json with all fields you must/can fill in case you broke your config.
