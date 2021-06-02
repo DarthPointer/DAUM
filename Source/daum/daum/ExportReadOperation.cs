@@ -15,6 +15,8 @@ namespace daum
 
         private static string endOfStructConfigName = "None";
 
+        private static string arrayRepeatPatternElementName = "ArrayRepeat";
+
         private static Dictionary<string, PatternElementProcesser> patternElementProcessers = new Dictionary<string, PatternElementProcesser>()
         {
             { "Size", SizePatternElementProcesser },
@@ -36,10 +38,12 @@ namespace daum
 
             { "ArrayElementTypeNameIndex", ArrayElementTypeNameIndexPatternElementProcesser },
             { "ElementCount", ElementCountPatternElementProcesser },
-            { "ArrayRepeat", ArrayRepeatPatternElementProcesser },
+            { arrayRepeatPatternElementName, ArrayRepeatPatternElementProcesser },
             { "StructPropertyArrayType", StructPropertyArrayTypePatternElementProcesser },
 
-            { "TextPropertyType", TextPropertyTypePatternElementProcesser },
+            { "KeyValTypeNameIndices", KeyValTypeNameIndicesPatternElementProcesser },
+
+            { "TextPropertySwitch", TextPropertySwitchPatternElementProcesser },
 
             { "SkipIfPatternEnds", SkipIfEndPatternElementProcesser },
 
@@ -314,24 +318,61 @@ namespace daum
 
             if (File.Exists(Program.runData.toolDir + $"StructPatterns/{typeName}"))
             {
-                readingContext.pattern.Add("ArrayRepeat");
+                readingContext.pattern.Add(arrayRepeatPatternElementName);
                 readingContext.pattern.AddRange(Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"StructPatterns/{typeName}")));
             }
         }
 
-        private static void TextPropertyTypePatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void KeyValTypeNameIndicesPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
         {
+            readingContext.pattern.TakeArg();
+
+            string tKey = FullNameString(uasset, uexp, readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 8;
+
+            string tVal = FullNameString(uasset, uexp, readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 8;
+
+            ReportExportContents($"<{tKey}, {tVal}>");
+
+            if (File.Exists(Program.runData.toolDir + $"BodyPatterns/{tKey}") && File.Exists(Program.runData.toolDir + $"BodyPatterns/{tVal}"))
+            {
+                List<string> keyPattern = Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"BodyPatterns/{tKey}"));
+                List<string> valPattern = Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"BodyPatterns/{tVal}"));
+
+                if (keyPattern.TakeArg() == arrayRepeatPatternElementName && valPattern.TakeArg() == arrayRepeatPatternElementName)
+                {
+                    readingContext.pattern.Add(arrayRepeatPatternElementName);
+                    readingContext.pattern.AddRange(keyPattern);
+                    readingContext.pattern.AddRange(valPattern);
+                }
+            }
+        }
+
+        private static void TextPropertySwitchPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            const Int32 hardcodedSwitchConstant = 256;
+
             readingContext.pattern.TakeArg();
 
             Int32 textPropTypeCode = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 4;
 
-            if (File.Exists(Program.runData.toolDir + $"TextPatterns/{textPropTypeCode}"))
+            if (textPropTypeCode == hardcodedSwitchConstant)            // Epic Games your uexp format is bullcrap. And find a language
+            {                                                           // with reflections being a native feature, please.
+                readingContext.pattern.Add("Skip");
+                readingContext.pattern.Add("2");
+                readingContext.pattern.Add("SPNTS");
+                readingContext.pattern.Add("SPNTS");
+            }
+            else
             {
-                readingContext.pattern.AddRange(Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"TextPatterns/{textPropTypeCode}")));
+                readingContext.pattern.Add("Skip");
+                readingContext.pattern.Add("5");
+                readingContext.pattern.Add("SPNTS");
             }
 
-            ReportExportContents($"TextProperty type code: {textPropTypeCode}");
+            ReportExportContents($"Assumed TextPropery Subtype Designator: {textPropTypeCode}");
         }
 
         private static void ExecutePushedReadingContext(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
