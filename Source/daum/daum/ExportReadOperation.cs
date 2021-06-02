@@ -27,6 +27,7 @@ namespace daum
             { "Bool", BoolPatternElementProcesser },
             { "Float32", FloatPatternElementProcesser },
             { "GUID", GUIDPatternElementProcesser },
+            { "SPNTS", SizePrefixedNullTermStringPatternElementProcesser },
 
             { "ObjectIndex", ObjectIndexPatternElementProcesser },
             { "Name", NamePatternElementProcesser },
@@ -36,6 +37,9 @@ namespace daum
             { "ArrayElementTypeNameIndex", ArrayElementTypeNameIndexPatternElementProcesser },
             { "ElementCount", ElementCountPatternElementProcesser },
             { "ArrayRepeat", ArrayRepeatPatternElementProcesser },
+            { "StructPropertyArrayType", StructPropertyArrayTypePatternElementProcesser },
+
+            { "TextPropertyType", TextPropertyTypePatternElementProcesser },
 
             { "SkipIfPatternEnds", SkipIfEndPatternElementProcesser },
 
@@ -206,7 +210,20 @@ namespace daum
             readingContext.currentUexpOffset += 16;
         }
 
-        private static void BytePropPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void SizePrefixedNullTermStringPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            Int32 size = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 4;
+
+            string value = StringFromOffset(uexp, readingContext.currentUexpOffset, size);
+            readingContext.currentUexpOffset += size;
+
+            ReportExportContents($"String: {value}");
+        }
+
+            private static void BytePropPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
@@ -249,7 +266,6 @@ namespace daum
 
             if (File.Exists(Program.runData.toolDir + $"BodyPatterns/{typeName}"))
             {
-                readingContext.pattern.Add("ArrayRepeat");
                 readingContext.pattern.AddRange(Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"BodyPatterns/{typeName}")));
             }
         }
@@ -287,6 +303,35 @@ namespace daum
             }
 
             readingContext.pattern.Clear();
+        }
+
+        private static void StructPropertyArrayTypePatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            string typeName = FullNameString(uasset, uexp, readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 8;
+
+            if (File.Exists(Program.runData.toolDir + $"StructPatterns/{typeName}"))
+            {
+                readingContext.pattern.Add("ArrayRepeat");
+                readingContext.pattern.AddRange(Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"StructPatterns/{typeName}")));
+            }
+        }
+
+        private static void TextPropertyTypePatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            Int32 textPropTypeCode = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 4;
+
+            if (File.Exists(Program.runData.toolDir + $"TextPatterns/{textPropTypeCode}"))
+            {
+                readingContext.pattern.AddRange(Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"TextPatterns/{textPropTypeCode}")));
+            }
+
+            ReportExportContents($"TextProperty type code: {textPropTypeCode}");
         }
 
         private static void ExecutePushedReadingContext(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
@@ -329,11 +374,11 @@ namespace daum
             }
             else if (index < 0)
             {
-                valueStr = ImportByIndexFullNameString(uasset, uexp, index);
+                valueStr = $"Import:{ImportByIndexFullNameString(uasset, uexp, index)}";
             }
             else
             {
-                valueStr = ExportByIndexFullNameString(uasset, uexp, index);
+                valueStr = $"Export:{ExportByIndexFullNameString(uasset, uexp, index)}";
             }
 
             ReportExportContents($"Object: {valueStr}");
@@ -348,6 +393,7 @@ namespace daum
             else
             {
                 readingContext.pattern.TakeArg();
+                readingContext.currentUexpOffset += 8;
             }
         }
 

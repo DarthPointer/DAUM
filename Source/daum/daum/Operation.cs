@@ -109,6 +109,20 @@ namespace daum
             Int32 size = DOLib.Int32FromSpanOffset(span, offset);
 
             Span<byte> scope = span.Slice(offset + stringSizeDesignationSize, size - 1);
+            offset += stringSizeDesignationSize;
+            string result = "";
+
+            foreach (char i in scope)
+            {
+                result += i;
+            }
+
+            return StringFromOffset(span, offset, size);
+        }
+
+        protected static string StringFromOffset(Span<byte> span, Int32 offset, Int32 size)
+        {
+            Span<byte> scope = span.Slice(offset, size - 1);
             string result = "";
 
             foreach (char i in scope)
