@@ -59,6 +59,10 @@ namespace daum
 
             Int32 exportIndex = GetExportIndex(span, args).Value;
 
+            Console.WriteLine("--------------------");
+            Console.WriteLine($"Export Index: {exportIndex}");
+            Console.WriteLine("--------------------");
+
             Int32 fisrtExportOffset = DOLib.Int32FromSpanOffset(span, exportOffsetOffset);
             Int32 uexpStructureOffset = DOLib.Int32FromSpanOffset(span, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportSerialOffsetOffset)
                 - DOLib.Int32FromSpanOffset(span, headerSizeOffset);

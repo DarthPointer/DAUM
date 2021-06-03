@@ -15,6 +15,8 @@ namespace daum
         private static string exitCommand = "exit";
         private static string printNullConfigCommand = "nullConfig";
         private static string parseCommand = "parse";
+        private static string fromScriptModeKey = "-s";
+        private static string setTargetFileScriptMode = "-f";
 
         private static Dictionary<string, Operation> operations = new Dictionary<string, Operation>() {
             { "-n", new NameDefOperation() },
@@ -32,7 +34,65 @@ namespace daum
             string toolDir = Assembly.GetExecutingAssembly().Location;
             toolDir = toolDir.Substring(0, toolDir.LastIndexOf('\\') + 1);
 
-            string fileName = GetFileName(args);
+            configPath = toolDir + "Config.json";
+
+            config = GetConfig();
+
+            List<string> argList = new List<string>(args);
+
+            if (argList[0] == fromScriptModeKey)
+            {
+                argList.TakeArg();
+
+                runData = new RunData()
+                {
+                    toolDir = toolDir,
+                };
+
+                string scriptFile = argList.TakeArg();
+                string[] commands = File.ReadAllLines(scriptFile);
+                Span<byte> uasset = null;
+
+                foreach (string command in commands)
+                {
+                    try
+                    {
+                        List<string> parsedCommand = ParseCommandString(command);
+
+                        if (parsedCommand[0] == setTargetFileScriptMode)
+                        {
+                            parsedCommand.TakeArg();
+
+                            string uassetFileName = parsedCommand.TakeArg();
+
+                            runData.uassetFileName = uassetFileName;
+                            runData.uexpFileName = uassetFileName.Substring(0, uassetFileName.LastIndexOf('.') + 1) + "uexp";
+                            runData.fileDir = uassetFileName.Substring(0, uassetFileName.LastIndexOf('\\') + 1);
+
+                            uasset = File.ReadAllBytes(uassetFileName);
+
+                            Console.WriteLine("--------------------");
+                            Console.WriteLine();
+                            Console.WriteLine(runData.uassetFileName);
+                            Console.WriteLine();
+                            Console.WriteLine("--------------------");
+                        }
+                        else
+                        {
+                            ProcessCommand(ref uasset, config, runData, parsedCommand, out bool _, out bool _);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Exception!");
+                        Console.WriteLine(e.ToString());
+                    }
+                }
+
+                return;
+            }
+
+            string fileName = argList.TakeArg();
 
             runData = new RunData()
             {
@@ -42,20 +102,14 @@ namespace daum
                 fileDir = fileName.Substring(0, fileName.LastIndexOf('\\') + 1)
             };
 
-            configPath = toolDir + "Config.json";
-
-            //Console.WriteLine(configPath);
-            config = GetConfig();
-
-            //Console.WriteLine(config.offsetterPath);
 
             if (runData.uassetFileName.Length > 0)
             {
                 Span<byte> span = File.ReadAllBytes(runData.uassetFileName);
 
-                if (args.Length > 1)
+                if (argList.Count > 0)
                 {
-                    ProcessCommand(ref span, config, runData, new List<string>(args.AsSpan(1).ToArray()), out _, out _);
+                    ProcessCommand(ref span, config, runData, argList, out _, out _);
                     return;
                 }
 
@@ -115,16 +169,6 @@ namespace daum
             {
                 Formatting = Formatting.Indented
             }));
-        }
-
-        private static string GetFileName(string[] args)
-        {
-            if (args.Length > 0)
-            {
-                return args[0];
-            }
-
-            return null;
         }
 
         private static bool ProcessCommand(ref Span<byte> span, Config config, RunData runData, List<string> command, out bool doneSomething, out bool parsed)
