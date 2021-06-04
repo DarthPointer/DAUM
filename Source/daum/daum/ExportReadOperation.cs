@@ -7,7 +7,7 @@ namespace daum
 {
     public class ExportReadOperation : Operation
     {
-        delegate void PatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext);
+        delegate void PatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext);
 
         private static int currentStructLevel = 0;
         private static string structLevelIdent = "  ";
@@ -63,10 +63,10 @@ namespace daum
             Console.WriteLine($"Export Index: {exportIndex}");
             Console.WriteLine("--------------------");
 
-            Int32 fisrtExportOffset = DOLib.Int32FromSpanOffset(Program.runData.uasset, exportOffsetOffset);
-            Int32 uexpStructureOffset = DOLib.Int32FromSpanOffset(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportSerialOffsetOffset)
-                - DOLib.Int32FromSpanOffset(Program.runData.uasset, headerSizeOffset);
-            Int32 uexpStructureSize = DOLib.Int32FromSpanOffset(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportSerialSizeOffset);
+            Int32 fisrtExportOffset = BitConverter.ToInt32(Program.runData.uasset, exportOffsetOffset);
+            Int32 uexpStructureOffset = BitConverter.ToInt32(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportSerialOffsetOffset)
+                - BitConverter.ToInt32(Program.runData.uasset, headerSizeOffset);
+            Int32 uexpStructureSize = BitConverter.ToInt32(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportSerialSizeOffset);
 
             ResetSLIString();
             machineState = new Stack<ReadingContext>();
@@ -88,12 +88,12 @@ namespace daum
             return "";
         }
 
-        private static void StepsTilEndOfStruct(Span<byte> uasset, Span<byte> uexp)
+        private static void StepsTilEndOfStruct(byte[] uasset, byte[] uexp)
         {
             while (Step(uasset, uexp));
         }
 
-        private static bool Step(Span<byte> uasset, Span<byte> uexp)
+        private static bool Step(byte[] uasset, byte[] uexp)
         {
             ReadingContext readingContext = machineState.Peek();
 
@@ -154,75 +154,75 @@ namespace daum
             return false;
         }
 
-        private static void SizePatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void SizePatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
-            readingContext.declaredSize = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset);
+            readingContext.declaredSize = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 4;
             readingContext.pattern.TakeArg();
 
             ReportExportContents($"Size: {readingContext.declaredSize}");
         }
 
-        private static void SkipPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void SkipPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
             readingContext.currentUexpOffset += Int32.Parse(readingContext.pattern.TakeArg());
         }
 
-        private static void SizeStartPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void SizeStartPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
             
             readingContext.declaredSizeStartOffset = readingContext.currentUexpOffset;
         }
 
-        private static void IntPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void IntPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"Int Value: {BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset)}");
+            ReportExportContents($"Int Value: {BitConverter.ToInt32(uexp, readingContext.currentUexpOffset)}");
 
             readingContext.currentUexpOffset += 4;
         }
 
-        private static void BoolPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void BoolPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"Bool Value: {BitConverter.ToBoolean(uexp.ToArray(), readingContext.currentUexpOffset)}");
+            ReportExportContents($"Bool Value: {BitConverter.ToBoolean(uexp, readingContext.currentUexpOffset)}");
 
             readingContext.currentUexpOffset += 1;
         }
 
-        private static void FloatPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void FloatPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"Float Value: {BitConverter.ToSingle(uexp.ToArray(), readingContext.currentUexpOffset)}");
+            ReportExportContents($"Float Value: {BitConverter.ToSingle(uexp, readingContext.currentUexpOffset)}");
 
             readingContext.currentUexpOffset += 4;
         }
 
-        private static void GUIDPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void GUIDPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
-            Int32 guid1 = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset);
-            Int32 guid2 = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset + 4);
-            Int32 guid3 = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset + 8);
-            Int32 guid4 = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset + 12);
+            Int32 guid1 = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
+            Int32 guid2 = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset + 4);
+            Int32 guid3 = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset + 8);
+            Int32 guid4 = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset + 12);
 
             ReportExportContents($"GUID: {guid1}-{guid2}-{guid3}-{guid4}");
 
             readingContext.currentUexpOffset += 16;
         }
 
-        private static void SizePrefixedNullTermStringPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void SizePrefixedNullTermStringPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
-            Int32 size = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset);
+            Int32 size = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 4;
 
             string value = Program.StringFromOffset(uexp, readingContext.currentUexpOffset, size);
@@ -231,16 +231,16 @@ namespace daum
             ReportExportContents($"String: {value}");
         }
 
-            private static void BytePropPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+            private static void BytePropPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"8 Bytes Value: {BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset)}");
+            ReportExportContents($"8 Bytes Value: {BitConverter.ToInt32(uexp, readingContext.currentUexpOffset)}");
 
             readingContext.currentUexpOffset += 8;
         }
 
-        private static void NamePatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void NamePatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
@@ -249,7 +249,7 @@ namespace daum
             readingContext.currentUexpOffset += 8;
         }
 
-        private static void StructTypeNameIndexPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void StructTypeNameIndexPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
             string typeName = FullNameString(uexp, readingContext.currentUexpOffset);
@@ -263,7 +263,7 @@ namespace daum
             }
         }
 
-        private static void ArrayElementTypeNameIndexPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void ArrayElementTypeNameIndexPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
@@ -278,11 +278,11 @@ namespace daum
             }
         }
 
-        private static void ElementCountPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void ElementCountPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
-            Int32 elementCount = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset);
+            Int32 elementCount = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 4;
 
             readingContext.collectionElementCount = elementCount;
@@ -290,7 +290,7 @@ namespace daum
             ReportExportContents($"Elements Count: {elementCount}");
         }
 
-        private static void ArrayRepeatPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void ArrayRepeatPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
@@ -313,7 +313,7 @@ namespace daum
             readingContext.pattern.Clear();
         }
 
-        private static void StructPropertyArrayTypePatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void StructPropertyArrayTypePatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
@@ -327,7 +327,7 @@ namespace daum
             }
         }
 
-        private static void KeyValTypeNameIndicesPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void KeyValTypeNameIndicesPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
@@ -353,13 +353,13 @@ namespace daum
             }
         }
 
-        private static void TextPropertySwitchPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void TextPropertySwitchPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             const Int32 hardcodedSwitchConstant = 256;
 
             readingContext.pattern.TakeArg();
 
-            Int32 textPropTypeCode = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset);
+            Int32 textPropTypeCode = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 4;
 
             if (textPropTypeCode == hardcodedSwitchConstant)            // Epic Games your uexp format is bullcrap. And find a language
@@ -379,7 +379,7 @@ namespace daum
             ReportExportContents($"Assumed TextPropery Subtype Designator: {textPropTypeCode}");
         }
 
-        private static void ExecutePushedReadingContext(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void ExecutePushedReadingContext(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             IncStructLevel();
 
@@ -391,7 +391,7 @@ namespace daum
             readingContext.nextStep = NextStep.applyPattern;
         }
 
-        private static void SkipIfEndPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void SkipIfEndPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
@@ -403,11 +403,11 @@ namespace daum
             }
         }
 
-        private static void ObjectIndexPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void ObjectIndexPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
-            Int32 index = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset);
+            Int32 index = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
 
             readingContext.currentUexpOffset += 4;
 
@@ -429,7 +429,7 @@ namespace daum
             ReportExportContents($"Object: {valueStr}");
         }
 
-        private static void NoneTerminatedPropListPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
+        private static void NoneTerminatedPropListPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             if (FullNameString(uexp, readingContext.currentUexpOffset) != endOfStructConfigName)
             {
@@ -472,12 +472,12 @@ namespace daum
             currentStructLevelIdent = "";
         }
 
-        private static string FullNameString(Span<byte> tgtFile, Int32 offset)
+        private static string FullNameString(byte[] tgtFile, Int32 offset)
         {
-            Int32 nameIndex = BitConverter.ToInt32(tgtFile.ToArray(), offset);
+            Int32 nameIndex = BitConverter.ToInt32(tgtFile, offset);
             string nameString = Program.runData.nameMap[nameIndex];
 
-            Int32 nameAug = BitConverter.ToInt32(tgtFile.ToArray(), offset + 4);
+            Int32 nameAug = BitConverter.ToInt32(tgtFile, offset + 4);
             if (nameAug != 0)
             {
                 nameString += $"_{nameAug}";
@@ -486,17 +486,17 @@ namespace daum
             return nameString;
         }
 
-        private static string ImportByIndexFullNameString(Span<byte> uasset, Span<byte> uexp, Int32 importIndex)
+        private static string ImportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 importIndex)
         {
             importIndex = -1*importIndex - 1;
-            Int32 firstImportOffset = BitConverter.ToInt32(uasset.ToArray(), OffsetConstants.importOffsetOffset);
+            Int32 firstImportOffset = BitConverter.ToInt32(uasset, OffsetConstants.importOffsetOffset);
             return FullNameString(uasset, firstImportOffset + importIndex * OffsetConstants.importDefSize + OffsetConstants.importNameOffset);
         }
 
-        private static string ExportByIndexFullNameString(Span<byte> uasset, Span<byte> uexp, Int32 exportIndex)
+        private static string ExportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 exportIndex)
         {
             exportIndex = exportIndex - 1;
-            Int32 firstExportOffset = BitConverter.ToInt32(uasset.ToArray(), exportOffsetOffset);
+            Int32 firstExportOffset = BitConverter.ToInt32(uasset, exportOffsetOffset);
             return FullNameString(uasset, firstExportOffset + exportIndex * exportDefSize + exportNameOffset);
         }
 

@@ -82,7 +82,7 @@ namespace daum
 
             if (runData.uassetFileName.Length > 0)
             {
-                Span<byte> span = File.ReadAllBytes(runData.uassetFileName);
+                byte[] uassetBytes = File.ReadAllBytes(runData.uassetFileName);
 
                 if (argList.Count > 0)
                 {
@@ -354,9 +354,9 @@ namespace daum
             }
         }
 
-        public static string StringFromOffset(Span<byte> span, Int32 offset, Int32 size)
+        public static string StringFromOffset(byte[] bytes, Int32 offset, Int32 size)
         {
-            Span<byte> scope = span.Slice(offset, size - 1);
+            Span<byte> scope = bytes.AsSpan(offset, size - 1);
             string result = "";
 
             foreach (char i in scope)
