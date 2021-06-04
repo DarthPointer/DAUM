@@ -16,7 +16,6 @@ namespace daum
         private static string printNullConfigCommand = "nullConfig";
         private static string parseCommand = "parse";
         private static string fromScriptModeKey = "-s";
-        private static string setTargetFileScriptMode = "-f";
 
         private static Dictionary<string, Operation> operations = new Dictionary<string, Operation>() {
             { "-n", new NameDefOperation() },
@@ -42,16 +41,17 @@ namespace daum
 
             config = GetConfig();
 
+            runData = new RunData()
+            {
+                toolDir = toolDir,
+            };
+
             List<string> argList = new List<string>(args);
 
             if (argList[0] == fromScriptModeKey)
             {
                 argList.TakeArg();
 
-                runData = new RunData()
-                {
-                    toolDir = toolDir,
-                };
 
                 string scriptFile = argList.TakeArg();
                 string[] commands = File.ReadAllLines(scriptFile);
@@ -63,28 +63,7 @@ namespace daum
                     {
                         List<string> parsedCommand = ParseCommandString(command);
 
-                        if (parsedCommand[0] == setTargetFileScriptMode)
-                        {
-                            parsedCommand.TakeArg();
-
-                            string uassetFileName = parsedCommand.TakeArg();
-
-                            runData.uassetFileName = uassetFileName;
-                            runData.uexpFileName = uassetFileName.Substring(0, uassetFileName.LastIndexOf('.') + 1) + "uexp";
-                            runData.fileDir = uassetFileName.Substring(0, uassetFileName.LastIndexOf('\\') + 1);
-
-                            uasset = File.ReadAllBytes(uassetFileName);
-
-                            Console.WriteLine("--------------------");
-                            Console.WriteLine();
-                            Console.WriteLine(runData.uassetFileName);
-                            Console.WriteLine();
-                            Console.WriteLine("--------------------");
-                        }
-                        else
-                        {
-                            ProcessCommand(ref uasset, config, runData, parsedCommand, out bool _, out bool _);
-                        }
+                        ProcessCommand(ref uasset, config, runData, parsedCommand, out bool _, out bool _);
                     }
                     catch (Exception e)
                     {
@@ -98,13 +77,7 @@ namespace daum
 
             string fileName = argList.TakeArg();
 
-            runData = new RunData()
-            {
-                toolDir = toolDir,
-                uassetFileName = fileName,
-                uexpFileName = fileName.Substring(0, fileName.LastIndexOf('.') + 1) + "uexp",
-                fileDir = fileName.Substring(0, fileName.LastIndexOf('\\') + 1)
-            };
+            LoadFile(fileName);
 
 
             if (runData.uassetFileName.Length > 0)
@@ -325,7 +298,7 @@ namespace daum
             return result;
         }
 
-        public static void LoadFileOperation(string uassetFileName)
+        public static void LoadFile(string uassetFileName)
         {
             runData.uassetFileName = uassetFileName;
             runData.uexpFileName = uassetFileName.Substring(0, uassetFileName.LastIndexOf('.') + 1) + "uexp";

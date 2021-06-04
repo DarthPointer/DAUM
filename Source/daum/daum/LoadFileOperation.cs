@@ -14,7 +14,7 @@ namespace daum
 
             string uassetFileName = args.TakeArg();
 
-            Program.LoadFileOperation(uassetFileName);
+            Program.LoadFile(uassetFileName);
 
             return "";
         }
