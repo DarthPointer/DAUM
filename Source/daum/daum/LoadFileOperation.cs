@@ -16,6 +16,12 @@ namespace daum
 
             Program.LoadFile(uassetFileName);
 
+            Console.WriteLine("--------------------");
+            Console.WriteLine();
+            Console.WriteLine(Program.runData.uassetFileName);
+            Console.WriteLine();
+            Console.WriteLine("--------------------");
+
             return "";
         }
     }
