@@ -120,7 +120,7 @@ namespace daum
                     declaredSizeStartOffset = -1,
                     collectionElementCount = -1,
 
-                    pattern = Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"PropertyPatterns/{typeName}")),
+                    pattern = Program.GetPattern($"{Program.PatternFolders.property}/{typeName}"),
 
                     nextStep = NextStep.applyPattern,
                     structCategory = StructCategory.nonExport
@@ -257,9 +257,9 @@ namespace daum
 
             readingContext.currentUexpOffset += 8;
 
-            if (File.Exists(Program.runData.toolDir + $"StructPatterns/{typeName}"))
+            if (Program.PatternExists($"{Program.PatternFolders.structure}/{typeName}"))
             {
-                readingContext.pattern.AddRange(Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"StructPatterns/{typeName}")));
+                readingContext.pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.structure}/{typeName}"));
             }
         }
 
@@ -272,9 +272,9 @@ namespace daum
 
             ReportExportContents($"Array Element Type: {typeName}");
 
-            if (File.Exists(Program.runData.toolDir + $"BodyPatterns/{typeName}"))
+            if (Program.PatternExists($"{Program.PatternFolders.body}/{typeName}"))
             {
-                readingContext.pattern.AddRange(Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"BodyPatterns/{typeName}")));
+                readingContext.pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.body}/{typeName}"));
             }
         }
 
@@ -320,10 +320,10 @@ namespace daum
             string typeName = FullNameString(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 8;
 
-            if (File.Exists(Program.runData.toolDir + $"StructPatterns/{typeName}"))
+            if (Program.PatternExists($"{Program.PatternFolders.structure}/{typeName}"))
             {
                 readingContext.pattern.Add(arrayRepeatPatternElementName);
-                readingContext.pattern.AddRange(Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"StructPatterns/{typeName}")));
+                readingContext.pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.structure}/{typeName}"));
             }
         }
 
@@ -339,10 +339,10 @@ namespace daum
 
             ReportExportContents($"<{tKey}, {tVal}>");
 
-            if (File.Exists(Program.runData.toolDir + $"BodyPatterns/{tKey}") && File.Exists(Program.runData.toolDir + $"BodyPatterns/{tVal}"))
+            if (Program.PatternExists($"{Program.PatternFolders.body}/{tKey}") && Program.PatternExists($"{Program.PatternFolders.body}/{tVal}"))
             {
-                List<string> keyPattern = Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"BodyPatterns/{tKey}"));
-                List<string> valPattern = Program.ParseCommandString(File.ReadAllText(Program.runData.toolDir + $"BodyPatterns/{tVal}"));
+                List<string> keyPattern = Program.GetPattern($"{Program.PatternFolders.body}/{tKey}");
+                List<string> valPattern = Program.GetPattern($"{Program.PatternFolders.body}/{tVal}");
 
                 if (keyPattern.TakeArg() == arrayRepeatPatternElementName && valPattern.TakeArg() == arrayRepeatPatternElementName)
                 {

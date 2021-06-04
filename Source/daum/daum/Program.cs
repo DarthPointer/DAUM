@@ -26,7 +26,8 @@ namespace daum
 
             { "-f", new LoadFileOperation() },
 
-            { "-o", new OffSetterCall() }
+            { "-o", new OffSetterCall() },
+            { "PreloadPatterns", new PreloadPatternsOperation() }
         };
 
         public static RunData runData;
@@ -206,6 +207,32 @@ namespace daum
             return true;
         }
 
+        public static List<string> GetPattern(string key)
+        {
+            if (runData.patternsArePreloaded)
+            {
+                return new List<string>(runData.preloadedPatterns[key]);
+            }
+
+            else
+            {
+                return ParseCommandString(File.ReadAllText(runData.toolDir + key));
+            }
+        }
+
+        public static bool PatternExists(string key)
+        {
+            if (runData.patternsArePreloaded)
+            {
+                return runData.preloadedPatterns.ContainsKey(key);
+            }
+
+            else
+            {
+                return File.Exists(runData.toolDir + key);
+            }
+        }
+
         public static void CallOffSetterWithArgs(string offSetterCallArgs, string tgtFile = null)
         {
             Process offSetter = Process.Start(config.offsetterPath, (tgtFile ?? runData.uassetFileName) + offSetterCallArgs);
@@ -378,6 +405,9 @@ namespace daum
 
             public string fileDir = "";
             public string toolDir = "";
+
+            public bool patternsArePreloaded = false;
+            public Dictionary<string, List<string>> preloadedPatterns = new Dictionary<string, List<string>>();
         }
 
         [JsonObject]
@@ -394,6 +424,13 @@ namespace daum
             public Int32 className;
             public Int32 outerIndex;
             public Int32 importName;
+        }
+
+        public static class PatternFolders
+        {
+            public const string property = "PropertyPatterns";
+            public const string body = "BodyPatterns";
+            public const string structure = "StructPatterns";
         }
     }
 }
