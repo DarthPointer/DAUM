@@ -99,7 +99,7 @@ namespace daum
 
             if (readingContext.nextStep == NextStep.substructNameAndType)
             {
-                string substructName = FullNameString(uasset, uexp, readingContext.currentUexpOffset);
+                string substructName = FullNameString(uexp, readingContext.currentUexpOffset);
                 readingContext.currentUexpOffset += 8;
 
                 if (substructName == endOfStructConfigName)
@@ -107,7 +107,7 @@ namespace daum
                     return false;
                 }
 
-                string typeName = FullNameString(uasset, uexp, readingContext.currentUexpOffset);
+                string typeName = FullNameString(uexp, readingContext.currentUexpOffset);
                 readingContext.currentUexpOffset += 8;
 
                 ReportExportContents("------------------------------");
@@ -244,7 +244,7 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"Name: {FullNameString(uasset, uexp, readingContext.currentUexpOffset)}");
+            ReportExportContents($"Name: {FullNameString(uexp, readingContext.currentUexpOffset)}");
 
             readingContext.currentUexpOffset += 8;
         }
@@ -252,7 +252,7 @@ namespace daum
         private static void StructTypeNameIndexPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
-            string typeName = FullNameString(uasset, uexp, readingContext.currentUexpOffset);
+            string typeName = FullNameString(uexp, readingContext.currentUexpOffset);
             ReportExportContents($"Structure Type: {typeName}");
 
             readingContext.currentUexpOffset += 8;
@@ -267,7 +267,7 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            string typeName = FullNameString(uasset, uexp, readingContext.currentUexpOffset);
+            string typeName = FullNameString(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 8;
 
             ReportExportContents($"Array Element Type: {typeName}");
@@ -317,7 +317,7 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            string typeName = FullNameString(uasset, uexp, readingContext.currentUexpOffset);
+            string typeName = FullNameString(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 8;
 
             if (File.Exists(Program.runData.toolDir + $"StructPatterns/{typeName}"))
@@ -331,10 +331,10 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            string tKey = FullNameString(uasset, uexp, readingContext.currentUexpOffset);
+            string tKey = FullNameString(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 8;
 
-            string tVal = FullNameString(uasset, uexp, readingContext.currentUexpOffset);
+            string tVal = FullNameString(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 8;
 
             ReportExportContents($"<{tKey}, {tVal}>");
@@ -431,7 +431,7 @@ namespace daum
 
         private static void NoneTerminatedPropListPatternElementProcesser(Span<byte> uasset, Span<byte> uexp, ReadingContext readingContext)
         {
-            if (FullNameString(uasset, uexp, readingContext.currentUexpOffset) != endOfStructConfigName)
+            if (FullNameString(uexp, readingContext.currentUexpOffset) != endOfStructConfigName)
             {
                 readingContext.nextStep = NextStep.substructNameAndType;
             }
@@ -472,12 +472,12 @@ namespace daum
             currentStructLevelIdent = "";
         }
 
-        private static string FullNameString(Span<byte> uasset, Span<byte> tgtFile, Int32 uexpOffset)
+        private static string FullNameString(Span<byte> tgtFile, Int32 offset)
         {
-            Int32 nameIndex = BitConverter.ToInt32(tgtFile.ToArray(), uexpOffset);
-            string nameString = NameString(uasset, nameIndex);
+            Int32 nameIndex = BitConverter.ToInt32(tgtFile.ToArray(), offset);
+            string nameString = Program.runData.nameMap[nameIndex];
 
-            Int32 nameAug = BitConverter.ToInt32(tgtFile.ToArray(), uexpOffset + 4);
+            Int32 nameAug = BitConverter.ToInt32(tgtFile.ToArray(), offset + 4);
             if (nameAug != 0)
             {
                 nameString += $"_{nameAug}";
@@ -490,14 +490,14 @@ namespace daum
         {
             importIndex = -1*importIndex - 1;
             Int32 firstImportOffset = BitConverter.ToInt32(uasset.ToArray(), OffsetConstants.importOffsetOffset);
-            return FullNameString(uasset, uasset, firstImportOffset + importIndex * OffsetConstants.importDefSize + OffsetConstants.importNameOffset);
+            return FullNameString(uasset, firstImportOffset + importIndex * OffsetConstants.importDefSize + OffsetConstants.importNameOffset);
         }
 
         private static string ExportByIndexFullNameString(Span<byte> uasset, Span<byte> uexp, Int32 exportIndex)
         {
             exportIndex = exportIndex - 1;
             Int32 firstExportOffset = BitConverter.ToInt32(uasset.ToArray(), exportOffsetOffset);
-            return FullNameString(uasset, uasset, firstExportOffset + exportIndex * exportDefSize + exportNameOffset);
+            return FullNameString(uasset, firstExportOffset + exportIndex * exportDefSize + exportNameOffset);
         }
 
         private static void ReportExportContents(string message)
