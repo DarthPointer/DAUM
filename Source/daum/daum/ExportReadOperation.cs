@@ -52,21 +52,21 @@ namespace daum
 
         private static Stack<ReadingContext> machineState;
 
-        public override string ExecuteAndGetOffSetterAgrs(ref Span<byte> span, List<string> args, out bool doneSomething, out bool useStandardBackup)
+        public override string ExecuteAndGetOffSetterAgrs(List<string> args, out bool doneSomething, out bool useStandardBackup)
         {
             useStandardBackup = false;
             doneSomething = false;
 
-            Int32 exportIndex = GetExportIndex(span, args).Value;
+            Int32 exportIndex = GetExportIndex(Program.runData.uasset, args).Value;
 
             Console.WriteLine("--------------------");
             Console.WriteLine($"Export Index: {exportIndex}");
             Console.WriteLine("--------------------");
 
-            Int32 fisrtExportOffset = DOLib.Int32FromSpanOffset(span, exportOffsetOffset);
-            Int32 uexpStructureOffset = DOLib.Int32FromSpanOffset(span, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportSerialOffsetOffset)
-                - DOLib.Int32FromSpanOffset(span, headerSizeOffset);
-            Int32 uexpStructureSize = DOLib.Int32FromSpanOffset(span, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportSerialSizeOffset);
+            Int32 fisrtExportOffset = DOLib.Int32FromSpanOffset(Program.runData.uasset, exportOffsetOffset);
+            Int32 uexpStructureOffset = DOLib.Int32FromSpanOffset(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportSerialOffsetOffset)
+                - DOLib.Int32FromSpanOffset(Program.runData.uasset, headerSizeOffset);
+            Int32 uexpStructureSize = DOLib.Int32FromSpanOffset(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportSerialSizeOffset);
 
             ResetSLIString();
             machineState = new Stack<ReadingContext>();
@@ -83,7 +83,7 @@ namespace daum
                 structCategory = StructCategory.export
             });
 
-            StepsTilEndOfStruct(span, File.ReadAllBytes(Program.runData.uexpFileName));
+            StepsTilEndOfStruct(Program.runData.uasset, File.ReadAllBytes(Program.runData.uexpFileName));
 
             return "";
         }
@@ -225,7 +225,7 @@ namespace daum
             Int32 size = BitConverter.ToInt32(uexp.ToArray(), readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 4;
 
-            string value = StringFromOffset(uexp, readingContext.currentUexpOffset, size);
+            string value = Program.StringFromOffset(uexp, readingContext.currentUexpOffset, size);
             readingContext.currentUexpOffset += size;
 
             ReportExportContents($"String: {value}");
@@ -489,8 +489,8 @@ namespace daum
         private static string ImportByIndexFullNameString(Span<byte> uasset, Span<byte> uexp, Int32 importIndex)
         {
             importIndex = -1*importIndex - 1;
-            Int32 firstImportOffset = BitConverter.ToInt32(uasset.ToArray(), importOffsetOffset);
-            return FullNameString(uasset, uasset, firstImportOffset + importIndex * importDefSize + importNameOffset);
+            Int32 firstImportOffset = BitConverter.ToInt32(uasset.ToArray(), OffsetConstants.importOffsetOffset);
+            return FullNameString(uasset, uasset, firstImportOffset + importIndex * OffsetConstants.importDefSize + OffsetConstants.importNameOffset);
         }
 
         private static string ExportByIndexFullNameString(Span<byte> uasset, Span<byte> uexp, Int32 exportIndex)

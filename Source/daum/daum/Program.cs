@@ -22,8 +22,12 @@ namespace daum
             { "-n", new NameDefOperation() },
             { "-i", new ImportDefOperation() },
             { "-edef", new ExportDefOperation() },
-            { "-o", new OffSetterCall() },
-            { "-eread", new ExportReadOperation() }
+
+            { "-eread", new ExportReadOperation() },
+
+            { "-f", new LoadFileOperation() },
+
+            { "-o", new OffSetterCall() }
         };
 
         public static RunData runData;
@@ -204,7 +208,7 @@ namespace daum
 
                     if (operations.ContainsKey(operationKey))
                     {
-                        string offSetterCallArgs = operations[operationKey].ExecuteAndGetOffSetterAgrs(ref span, command, out doneSomething, out bool useStandardBackup);
+                        string offSetterCallArgs = operations[operationKey].ExecuteAndGetOffSetterAgrs(command, out doneSomething, out bool useStandardBackup);
 
                         if (useStandardBackup)
                         {
@@ -321,11 +325,85 @@ namespace daum
             return result;
         }
 
+        public static void LoadFileOperation(string uassetFileName)
+        {
+            runData.uassetFileName = uassetFileName;
+            runData.uexpFileName = uassetFileName.Substring(0, uassetFileName.LastIndexOf('.') + 1) + "uexp";
+            runData.fileDir = uassetFileName.Substring(0, uassetFileName.LastIndexOf('\\') + 1);
+
+            runData.uasset = File.ReadAllBytes(runData.uassetFileName);
+            runData.uexp = File.ReadAllBytes(runData.uexpFileName);
+
+            LoadNames();
+            LoadImports();
+        }
+
+        private static void LoadNames()
+        {
+            Int32 nameCount = BitConverter.ToInt32(runData.uasset, OffsetConstants.nameCountOffset);
+            Int32 currentNameOffset = BitConverter.ToInt32(runData.uasset, OffsetConstants.nameOffsetOffset);
+
+            runData.nameMap = new string[nameCount];
+
+            for (Int32 i = 0; i < nameCount; i++)
+            {
+                Int32 stringSize = BitConverter.ToInt32(runData.uasset, currentNameOffset);
+
+                runData.nameMap[i] = StringFromOffset(runData.uasset, currentNameOffset + OffsetConstants.stringSizeDesignationSize, stringSize);
+
+                currentNameOffset += OffsetConstants.stringSizeDesignationSize + stringSize + OffsetConstants.nameHashesSize;
+            }
+        }
+
+        public static string StringFromOffset(Span<byte> span, Int32 offset, Int32 size)
+        {
+            Span<byte> scope = span.Slice(offset, size - 1);
+            string result = "";
+
+            foreach (char i in scope)
+            {
+                result += i;
+            }
+
+            return result;
+        }
+
+        private static void LoadImports()
+        {
+            Int32 importCount = BitConverter.ToInt32(runData.uasset, OffsetConstants.importCountOffset);
+            Int32 currentImportOffset = BitConverter.ToInt32(runData.uasset, OffsetConstants.importOffsetOffset);
+
+            runData.importMap = new ImportData[importCount];
+
+            for (Int32 i = 0; i < importCount; i++)
+            {
+                runData.importMap[i] = GetImportDataFromOffset(runData.uasset, currentImportOffset);
+
+                currentImportOffset += OffsetConstants.importDefSize;
+            }
+        }
+
+        private static ImportData GetImportDataFromOffset(byte[] uasset, Int32 offset)
+        {
+            return new ImportData()
+            {
+                packageName = BitConverter.ToInt32(uasset, offset + OffsetConstants.importPackageOffset),
+                className = BitConverter.ToInt32(uasset, offset + OffsetConstants.importClassOffset),
+                outerIndex = BitConverter.ToInt32(uasset, offset + OffsetConstants.importOuterIndexOffset),
+                importName = BitConverter.ToInt32(uasset, offset + OffsetConstants.importNameOffset)
+            };
+        }
 
         public record RunData
         {
             public string uassetFileName = "";
             public string uexpFileName = "";
+            public byte[] uasset = null;
+            public byte[] uexp = null;
+
+            public string[] nameMap = null;
+            public ImportData[] importMap = null;
+
             public string fileDir = "";
             public string toolDir = "";
         }
@@ -336,6 +414,14 @@ namespace daum
             public string offsetterPath = "";
             public string drgParserPath = "";
             public bool autoParseAfterSuccess = false;
+        }
+
+        public record ImportData
+        {
+            public Int32 packageName;
+            public Int32 className;
+            public Int32 outerIndex;
+            public Int32 importName;
         }
     }
 }
