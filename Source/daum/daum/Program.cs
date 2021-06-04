@@ -55,7 +55,6 @@ namespace daum
 
                 string scriptFile = argList.TakeArg();
                 string[] commands = File.ReadAllLines(scriptFile);
-                Span<byte> uasset = null;
 
                 foreach (string command in commands)
                 {
@@ -63,7 +62,7 @@ namespace daum
                     {
                         List<string> parsedCommand = ParseCommandString(command);
 
-                        ProcessCommand(ref uasset, config, runData, parsedCommand, out bool _, out bool _);
+                        ProcessCommand(config, runData, parsedCommand, out bool _, out bool _);
                     }
                     catch (Exception e)
                     {
@@ -86,7 +85,7 @@ namespace daum
 
                 if (argList.Count > 0)
                 {
-                    ProcessCommand(ref span, config, runData, argList, out _, out _);
+                    ProcessCommand(config, runData, argList, out _, out _);
                     return;
                 }
 
@@ -102,7 +101,7 @@ namespace daum
                         List<string> command = ParseCommandString(Console.ReadLine());
                         if (command[0].Length > 0)
                         {
-                            runLoop = ProcessCommand(ref span, config, runData, command, out bool doneSomething, out bool parsed);
+                            runLoop = ProcessCommand(config, runData, command, out bool doneSomething, out bool parsed);
                             if (doneSomething)
                             {
                                 if (config.autoParseAfterSuccess && !parsed) ParseFilesWithDRGPareser(config.drgParserPath, runData.uassetFileName);
@@ -148,7 +147,7 @@ namespace daum
             }));
         }
 
-        private static bool ProcessCommand(ref Span<byte> span, Config config, RunData runData, List<string> command, out bool doneSomething, out bool parsed)
+        private static bool ProcessCommand(Config config, RunData runData, List<string> command, out bool doneSomething, out bool parsed)
         {
             parsed = false;
 
@@ -187,7 +186,7 @@ namespace daum
                         {
                             if (File.Exists(runData.uassetFileName + ".daum")) File.Delete(runData.uassetFileName + ".daum");
                             Directory.Move(runData.uassetFileName, runData.uassetFileName + ".daum");
-                            File.WriteAllBytes(runData.uassetFileName, span.ToArray());
+                            File.WriteAllBytes(runData.uassetFileName, Program.runData.uasset);
                         }
 
                         if (offSetterCallArgs != "")
@@ -195,7 +194,7 @@ namespace daum
                             CallOffSetterWithArgs(offSetterCallArgs + " -m -r");
                         }
 
-                        span = File.ReadAllBytes(runData.uassetFileName);
+                        Program.runData.uasset = File.ReadAllBytes(runData.uassetFileName);
 
                         return true;
                     }

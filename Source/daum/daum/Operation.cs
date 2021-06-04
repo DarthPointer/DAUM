@@ -363,7 +363,10 @@ namespace daum
 
             Span<byte> insert = MakeNameDef(args[0]);
             Program.runData.uasset = Insert(Program.runData.uasset, insert, addAtOffset).ToArray();
-            Program.runData.nameMap[Program.runData.nameMap.Length] = args.TakeArg();
+
+            Int32 newNameMapCount = Program.runData.nameMap.Length + 1;
+            Array.Resize(ref Program.runData.nameMap, newNameMapCount);
+            Program.runData.nameMap[newNameMapCount - 1] = args.TakeArg();
 
             return $" -n {insert.Length} 1";
         }
@@ -415,7 +418,7 @@ namespace daum
             Int32 sizeChange = newName.Length + 1 - oldNameStoredSize;
 
             string origName = StringFromNameDef(Program.runData.uasset, replaceAtOffset);
-            Program.runData.nameMap[Array.IndexOf(Program.runData.uasset, origName)] = newName;
+            Program.runData.nameMap[Array.IndexOf(Program.runData.nameMap, origName)] = newName;
 
             Program.runData.uasset = Remove(Program.runData.uasset, replaceAtOffset, oldNameStoredSize + 8).ToArray();
             Program.runData.uasset = Insert(Program.runData.uasset, MakeNameDef(newName), replaceAtOffset).ToArray();
@@ -451,7 +454,10 @@ namespace daum
             Int32 name = GetNameIndex(Program.runData.uasset, args).Value;
 
             Program.runData.uasset = Insert(Program.runData.uasset, MakeImportDef(package, _class, outerIndex, name), addAtOffset).ToArray();
-            Program.runData.importMap[Program.runData.importMap.Length] = new Program.ImportData()
+
+            Int32 newImportMapCount = Program.runData.importMap.Length + 1;
+            Array.Resize(ref Program.runData.importMap, newImportMapCount);
+            Program.runData.importMap[newImportMapCount - 1] = new Program.ImportData()
             {
                 packageName = package,
                 className = _class,
