@@ -6,7 +6,6 @@ D:\Repos\DAUM\Source\daum\TestHelper\bin\Release\net5.0\TestHelper.dll
 D:\Repos\DAUM\Source\daum\TestHelper\bin\Release\net5.0\ref\TestHelper.dll
 D:\Repos\DAUM\Source\daum\TestHelper\bin\Release\net5.0\TestHelper.pdb
 D:\Repos\DAUM\Source\daum\TestHelper\bin\Release\net5.0\DRGOffSetterLib.dll
-D:\Repos\DAUM\Source\daum\TestHelper\obj\Release\net5.0\TestHelper.csprojAssemblyReference.cache
 D:\Repos\DAUM\Source\daum\TestHelper\obj\Release\net5.0\TestHelper.GeneratedMSBuildEditorConfig.editorconfig
 D:\Repos\DAUM\Source\daum\TestHelper\obj\Release\net5.0\TestHelper.AssemblyInfoInputs.cache
 D:\Repos\DAUM\Source\daum\TestHelper\obj\Release\net5.0\TestHelper.AssemblyInfo.cs
@@ -16,3 +15,4 @@ D:\Repos\DAUM\Source\daum\TestHelper\obj\Release\net5.0\TestHelper.dll
 D:\Repos\DAUM\Source\daum\TestHelper\obj\Release\net5.0\ref\TestHelper.dll
 D:\Repos\DAUM\Source\daum\TestHelper\obj\Release\net5.0\TestHelper.pdb
 D:\Repos\DAUM\Source\daum\TestHelper\obj\Release\net5.0\TestHelper.genruntimeconfig.cache
+D:\Repos\DAUM\Source\daum\TestHelper\obj\Release\net5.0\TestHelper.csprojAssemblyReference.cache

@@ -193,9 +193,8 @@ namespace daum
                         if (offSetterCallArgs != "")
                         {
                             CallOffSetterWithArgs(offSetterCallArgs + " -m -r");
+                            Program.runData.uasset = File.ReadAllBytes(runData.uassetFileName);
                         }
-
-                        Program.runData.uasset = File.ReadAllBytes(runData.uassetFileName);
 
                         return true;
                     }

@@ -235,9 +235,9 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"8 Bytes Value: {BitConverter.ToInt32(uexp, readingContext.currentUexpOffset)}");
+            ReportExportContents($"Bytes Value: {BitConverter.ToString(uexp, readingContext.currentUexpOffset, readingContext.declaredSize)}");
 
-            readingContext.currentUexpOffset += 8;
+            readingContext.currentUexpOffset += readingContext.declaredSize;
         }
 
         private static void NamePatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
