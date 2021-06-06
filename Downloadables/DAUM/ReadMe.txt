@@ -88,6 +88,14 @@ export is eiter -i index or name with aug (like Upgradable 0). DO NOT SKIP THE A
 Auxiliary commands:
 nullconfig: Creates NullConfig.json with all fields you must/can fill in case you broke your config.
 
+ONLY AS APPLICATION LAUNCH PARAMS: -s [Script File Name]:
+Executes all strings of given file as interactive mode commands.
+
+-f [Uasset File Name]: Loads given file as a new active file, uexp is changed automatically. Basically a replacement for exit and launch for the new file.
+
+PreloadPatterns: Load all pattern files contents to boost performance, relevant for script execution mode. Don't use in interactive mode for your own convinience.
+You will have to execute it again to apply changes in pattern files in case you executed it at least once in the current run of the app.
+
 parse: Call DRG Parser to parse current file (if its path is configged, exception otherwise).
 
 -o: Passes current file name to OffSetter with all the arguments you add further.
