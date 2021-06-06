@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Newtonsoft.Json;
 using System.IO;
-using DRGOffSetterLib;
 using System.Reflection;
+using System.Text;
+
+using DRGOffSetterLib;
 
 namespace daum
 {
@@ -345,25 +347,31 @@ namespace daum
 
             for (Int32 i = 0; i < nameCount; i++)
             {
-                Int32 stringSize = BitConverter.ToInt32(runData.uasset, currentNameOffset);
+                runData.nameMap[i] = SizePrefixedStringFromOffsetOffsetAdvance(runData.uasset, ref currentNameOffset);
 
-                runData.nameMap[i] = StringFromOffset(runData.uasset, currentNameOffset + OffsetConstants.stringSizeDesignationSize, stringSize);
-
-                currentNameOffset += OffsetConstants.stringSizeDesignationSize + stringSize + OffsetConstants.nameHashesSize;
+                currentNameOffset += OffsetConstants.nameHashesSize;
             }
         }
 
-        public static string StringFromOffset(byte[] bytes, Int32 offset, Int32 size)
+        public static string SizePrefixedStringFromOffsetOffsetAdvance(byte[] bytes, ref Int32 offset)
         {
-            Span<byte> scope = bytes.AsSpan(offset, size - 1);
-            string result = "";
+            Int32 count = BitConverter.ToInt32(bytes, offset);
+            offset += 4;
 
-            foreach (char i in scope)
+            string value = "";
+
+            if (count > 0)
             {
-                result += i;
+                value = Encoding.UTF8.GetString(bytes, offset, count - 1);
+                offset += count;
+            }
+            else if (count < 0)
+            {
+                value = Encoding.Unicode.GetString(bytes, offset, -1*count - 1);
+                offset += -2 * count;
             }
 
-            return result;
+            return value;
         }
 
         private static void LoadImports()

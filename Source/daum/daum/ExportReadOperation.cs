@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
+
 using DRGOffSetterLib;
 
 namespace daum
@@ -13,10 +15,11 @@ namespace daum
         private static string structLevelIdent = "  ";
         private static string currentStructLevelIdent = "";
 
-        private static string endOfStructConfigName = "None";
+        private const string endOfStructConfigName = "None";
 
-        private static string arrayRepeatPatternElementName = "ArrayRepeat";
-
+        private const string arrayRepeatPatternElementName = "ArrayRepeat";
+        private const string arrayRepeatEndPatternElementName = "ArrayRepeatEnd";
+        private const string elementCountPatternElementName = "ElementCount";
         private static Dictionary<string, PatternElementProcesser> patternElementProcessers = new Dictionary<string, PatternElementProcesser>()
         {
             { "Size", SizePatternElementProcesser },
@@ -25,6 +28,7 @@ namespace daum
             { "Skip", SkipPatternElementProcesser },
 
             { "Int32", IntPatternElementProcesser },
+            { "UInt32", UIntPatternElementProcesser },
             { "ByteProp", BytePropPatternElementProcesser },
             { "Bool", BoolPatternElementProcesser },
             { "Float32", FloatPatternElementProcesser },
@@ -37,13 +41,13 @@ namespace daum
             { "StructTypeNameIndex", StructTypeNameIndexPatternElementProcesser },
 
             { "ArrayElementTypeNameIndex", ArrayElementTypeNameIndexPatternElementProcesser },
-            { "ElementCount", ElementCountPatternElementProcesser },
+            { elementCountPatternElementName, ElementCountPatternElementProcesser },
             { arrayRepeatPatternElementName, ArrayRepeatPatternElementProcesser },
             { "StructPropertyArrayType", StructPropertyArrayTypePatternElementProcesser },
 
-            { "KeyValTypeNameIndices", KeyValTypeNameIndicesPatternElementProcesser },
+            { "MapGeneratorTypes", MapGeneratorTypesPatternElementProcesser },
 
-            { "TextPropertySwitch", TextPropertySwitchPatternElementProcesser },
+            { "TextPropertyDirtyHack", TextPropertyDirtyHackPatternElementProcesser },
 
             { "SkipIfPatternEnds", SkipIfEndPatternElementProcesser },
 
@@ -186,6 +190,15 @@ namespace daum
             readingContext.currentUexpOffset += 4;
         }
 
+        private static void UIntPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            ReportExportContents($"Int Value: {BitConverter.ToUInt32(uexp, readingContext.currentUexpOffset)}");
+
+            readingContext.currentUexpOffset += 4;
+        }
+
         private static void BoolPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
@@ -222,22 +235,29 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            Int32 size = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
-            readingContext.currentUexpOffset += 4;
-
-            string value = Program.StringFromOffset(uexp, readingContext.currentUexpOffset, size);
-            readingContext.currentUexpOffset += size;
+            string value = Program.SizePrefixedStringFromOffsetOffsetAdvance(uexp, ref readingContext.currentUexpOffset);
 
             ReportExportContents($"String: {value}");
         }
 
-            private static void BytePropPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        private static void BytePropPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
             ReportExportContents($"Bytes Value: {BitConverter.ToString(uexp, readingContext.currentUexpOffset, readingContext.declaredSize)}");
 
             readingContext.currentUexpOffset += readingContext.declaredSize;
+        }
+
+        private static void UnknownBytesPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            Int32 count = Int32.Parse(readingContext.pattern.TakeArg());
+
+            ReportExportContents($"Bytes Value: {BitConverter.ToString(uexp, readingContext.currentUexpOffset, count)}");
+
+            readingContext.currentUexpOffset += count;
         }
 
         private static void NamePatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -294,6 +314,18 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
+            List<string> repeatedPattern = new List<string>();
+
+            // passing all the stuff to repeat in cycle which is all past ArrayRepeat and til ArrayRepeatEnd or end of pattern
+            while (readingContext.pattern.Count > 0)
+            {
+                string element = readingContext.pattern.TakeArg();
+
+                if (element == arrayRepeatEndPatternElementName) break;
+
+                repeatedPattern.Add(element);
+            }
+
             for (int i = 0; i < readingContext.collectionElementCount; i++)
             {
                 ReportExportContents($"Element {i}");
@@ -301,7 +333,7 @@ namespace daum
                 machineState.Push(new ReadingContext()
                 {
                     currentUexpOffset = readingContext.currentUexpOffset,
-                    pattern = new List<string>(readingContext.pattern),
+                    pattern = new List<string>(repeatedPattern),
 
                     nextStep = NextStep.applyPattern,
                     structCategory = StructCategory.nonExport
@@ -309,8 +341,6 @@ namespace daum
 
                 ExecutePushedReadingContext(uasset, uexp, readingContext);
             }
-
-            readingContext.pattern.Clear();
         }
 
         private static void StructPropertyArrayTypePatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -327,7 +357,7 @@ namespace daum
             }
         }
 
-        private static void KeyValTypeNameIndicesPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        private static void MapGeneratorTypesPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
@@ -346,6 +376,12 @@ namespace daum
 
                 if (keyPattern.TakeArg() == arrayRepeatPatternElementName && valPattern.TakeArg() == arrayRepeatPatternElementName)
                 {
+                    readingContext.pattern.Add(elementCountPatternElementName);
+                    readingContext.pattern.Add(arrayRepeatPatternElementName);
+                    readingContext.pattern.AddRange(keyPattern);
+                    readingContext.pattern.Add(arrayRepeatEndPatternElementName);
+
+                    readingContext.pattern.Add(elementCountPatternElementName);
                     readingContext.pattern.Add(arrayRepeatPatternElementName);
                     readingContext.pattern.AddRange(keyPattern);
                     readingContext.pattern.AddRange(valPattern);
@@ -353,30 +389,21 @@ namespace daum
             }
         }
 
-        private static void TextPropertySwitchPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        enum CharType
         {
-            const Int32 hardcodedSwitchConstant = 256;
+            oneByte,
+            unicode
+        }
 
+        private static void TextPropertyDirtyHackPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
             readingContext.pattern.TakeArg();
 
-            Int32 textPropTypeCode = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
-            readingContext.currentUexpOffset += 4;
+            //Epic Games probably like it when you have to fuck your brain with TexProperty having a body prefix which varies in SIZE between types.
+            //I don't. I hope the author of that idea got a proper remedy.
 
-            if (textPropTypeCode == hardcodedSwitchConstant)            // Epic Games your uexp format is bullcrap. And find a language
-            {                                                           // with reflections being a native feature, please.
-                readingContext.pattern.Add("Skip");
-                readingContext.pattern.Add("2");
-                readingContext.pattern.Add("SPNTS");
-                readingContext.pattern.Add("SPNTS");
-            }
-            else
-            {
-                readingContext.pattern.Add("Skip");
-                readingContext.pattern.Add("5");
-                readingContext.pattern.Add("SPNTS");
-            }
-
-            ReportExportContents($"Assumed TextPropery Subtype Designator: {textPropTypeCode}");
+            readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
+            ReportExportContents("Text Property support is postponed. ETA depends on readability of UE shitcode.");
         }
 
         private static void ExecutePushedReadingContext(byte[] uasset, byte[] uexp, ReadingContext readingContext)

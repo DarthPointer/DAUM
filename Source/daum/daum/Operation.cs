@@ -63,38 +63,14 @@ namespace daum
             return bytes;
         }
 
-        protected static string StringFromNameDef(byte[] uasset, Int32 offset)
+        protected static string SizePrefixedStringFromOffset(byte[] uasset, Int32 offset)
         {
-            Int32 size = BitConverter.ToInt32(uasset, offset);
-
-            Span<byte> scope = uasset.AsSpan(offset + OffsetConstants.stringSizeDesignationSize, size - 1);
-            offset += OffsetConstants.stringSizeDesignationSize;
-            string result = "";
-
-            foreach (char i in scope)
-            {
-                result += i;
-            }
-
-            return Program.StringFromOffset(uasset, offset, size);
+            return Program.SizePrefixedStringFromOffsetOffsetAdvance(uasset, ref offset);
         }
 
         protected static Int32? FindNameIndex(byte[] uasset, string name)
         {
-            Int32 currentNameOffset = BitConverter.ToInt32(uasset, OffsetConstants.nameOffsetOffset);
-
-            for (int processedRecords = 0; processedRecords < BitConverter.ToInt32(uasset, OffsetConstants.nameCountOffset); processedRecords++)
-            {
-                string storedName = StringFromNameDef(uasset, currentNameOffset);
-                if (storedName == name)
-                {
-                    return processedRecords;
-                }
-
-                currentNameOffset += 9 + storedName.Length;
-            }
-
-            return null;
+            return Array.IndexOf(Program.runData.nameMap, name);
         }
 
         protected static Int32? GetNameIndex(byte[] uasset, List<string> args)
@@ -349,7 +325,7 @@ namespace daum
 
             for (int processedRecords = 0; processedRecords < mapRecordsCount; processedRecords++)
             {
-                string storedName = StringFromNameDef(Program.runData.uasset, currentNameOffset);
+                string storedName = SizePrefixedStringFromOffset(Program.runData.uasset, currentNameOffset);
                 if (storedName == name)
                 {
                     return currentNameOffset;
@@ -388,7 +364,7 @@ namespace daum
             Int32 oldNameStoredSize = BitConverter.ToInt32(Program.runData.uasset, replaceAtOffset);
             Int32 sizeChange = newName.Length + 1 - oldNameStoredSize;
 
-            string origName = StringFromNameDef(Program.runData.uasset, replaceAtOffset);
+            string origName = SizePrefixedStringFromOffset(Program.runData.uasset, replaceAtOffset);
             Program.runData.nameMap[Array.IndexOf(Program.runData.nameMap, origName)] = newName;
 
             Program.runData.uasset = Remove(Program.runData.uasset, replaceAtOffset, oldNameStoredSize + 8);
