@@ -20,20 +20,25 @@ namespace daum
         private const string arrayRepeatPatternElementName = "ArrayRepeat";
         private const string arrayRepeatEndPatternElementName = "ArrayRepeatEnd";
         private const string elementCountPatternElementName = "ElementCount";
+
+        private const string scaledArrayElementsPatternElementName = "ScaledArrayElements";
+
         private static Dictionary<string, PatternElementProcesser> patternElementProcessers = new Dictionary<string, PatternElementProcesser>()
         {
             { "Size", SizePatternElementProcesser },
             { "SizeStart", SizeStartPatternElementProcesser },
 
             { "Skip", SkipPatternElementProcesser },
+            { "UnknownBytes", UnknownBytesPatternElementProcesser },
 
             { "Int32", IntPatternElementProcesser },
             { "UInt32", UIntPatternElementProcesser },
             { "ByteProp", BytePropPatternElementProcesser },
-            { "Bool", BoolPatternElementProcesser },
             { "Float32", FloatPatternElementProcesser },
             { "GUID", GUIDPatternElementProcesser },
             { "SPNTS", SizePrefixedNullTermStringPatternElementProcesser },
+
+            { "Bool", BoolPatternElementProcesser },
 
             { "ObjectIndex", ObjectIndexPatternElementProcesser },
             { "Name", NamePatternElementProcesser },
@@ -221,10 +226,16 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            Int32 guid1 = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
-            Int32 guid2 = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset + 4);
-            Int32 guid3 = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset + 8);
-            Int32 guid4 = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset + 12);
+            string Quad(Int32 StartPos)
+            {
+                return BitConverter.ToString(uexp, StartPos + 3, 1) + BitConverter.ToString(uexp, StartPos + 2, 1) +
+                    BitConverter.ToString(uexp, StartPos + 1, 1) + BitConverter.ToString(uexp, StartPos + 0, 1);
+            }
+
+            string guid1 = Quad(readingContext.currentUexpOffset + 0);
+            string guid2 = Quad(readingContext.currentUexpOffset + 4);
+            string guid3 = Quad(readingContext.currentUexpOffset + 8);
+            string guid4 = Quad(readingContext.currentUexpOffset + 12);
 
             ReportExportContents($"GUID: {guid1}-{guid2}-{guid3}-{guid4}");
 
@@ -255,7 +266,7 @@ namespace daum
 
             Int32 count = Int32.Parse(readingContext.pattern.TakeArg());
 
-            ReportExportContents($"Bytes Value: {BitConverter.ToString(uexp, readingContext.currentUexpOffset, count)}");
+            ReportExportContents($"Unknown Bytes: {BitConverter.ToString(uexp, readingContext.currentUexpOffset, count)}");
 
             readingContext.currentUexpOffset += count;
         }
@@ -314,9 +325,26 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
+            Int32 scaledElementSize;
+
+            // Some element types have no context-free size determination apart from assumed elements total size and count.
+            // Also ignore it if we have 0 elements because it is pointless and causes exception.
+            if (readingContext.pattern[0] == scaledArrayElementsPatternElementName && readingContext.collectionElementCount != 0)
+            {
+                readingContext.pattern.TakeArg();
+                scaledElementSize = (readingContext.declaredSizeStartOffset + readingContext.declaredSize -
+                    readingContext.currentUexpOffset) /
+                    (readingContext.collectionElementCount);
+            }
+            else
+            {
+                scaledElementSize = -1;
+            }
+
             List<string> repeatedPattern = new List<string>();
 
-            // passing all the stuff to repeat in cycle which is all past ArrayRepeat and til ArrayRepeatEnd or end of pattern
+
+            // Passing all the stuff to repeat in cycle which is all past ArrayRepeat and til ArrayRepeatEnd or end of pattern
             while (readingContext.pattern.Count > 0)
             {
                 string element = readingContext.pattern.TakeArg();
@@ -336,7 +364,9 @@ namespace daum
                     pattern = new List<string>(repeatedPattern),
 
                     nextStep = NextStep.applyPattern,
-                    structCategory = StructCategory.nonExport
+                    structCategory = StructCategory.nonExport,
+
+                    declaredSize = scaledElementSize
                 });
 
                 ExecutePushedReadingContext(uasset, uexp, readingContext);
