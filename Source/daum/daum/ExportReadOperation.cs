@@ -392,6 +392,8 @@ namespace daum
             string typeName = FullNameString(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 8;
 
+            ReportExportContents($"Element structure type: {typeName}");
+
             if (Program.PatternExists($"{Program.PatternFolders.structure}/{typeName}"))
             {
                 readingContext.pattern.Add(arrayRepeatPatternElementName);
