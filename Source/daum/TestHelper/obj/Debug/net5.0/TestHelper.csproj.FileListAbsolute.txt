@@ -15,3 +15,4 @@ D:\Repos\DAUM\Source\daum\TestHelper\obj\Debug\net5.0\TestHelper.dll
 D:\Repos\DAUM\Source\daum\TestHelper\obj\Debug\net5.0\ref\TestHelper.dll
 D:\Repos\DAUM\Source\daum\TestHelper\obj\Debug\net5.0\TestHelper.pdb
 D:\Repos\DAUM\Source\daum\TestHelper\obj\Debug\net5.0\TestHelper.genruntimeconfig.cache
+D:\Repos\DAUM\Source\daum\TestHelper\obj\Debug\net5.0\TestHelper.csprojAssemblyReference.cache

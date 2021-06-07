@@ -33,6 +33,7 @@ namespace daum
 
             { "Int32", IntPatternElementProcesser },
             { "UInt32", UIntPatternElementProcesser },
+            { "UInt64", UInt64PatternElementProcesser },
             { "ByteProp", BytePropPatternElementProcesser },
             { "Float32", FloatPatternElementProcesser },
             { "GUID", GUIDPatternElementProcesser },
@@ -184,6 +185,8 @@ namespace daum
             readingContext.pattern.TakeArg();
             
             readingContext.declaredSizeStartOffset = readingContext.currentUexpOffset;
+
+            ReportExportContents($"Size Start Offset: {readingContext.declaredSizeStartOffset}");
         }
 
         private static void IntPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -202,6 +205,15 @@ namespace daum
             ReportExportContents($"Int Value: {BitConverter.ToUInt32(uexp, readingContext.currentUexpOffset)}");
 
             readingContext.currentUexpOffset += 4;
+        }
+
+        private static void UInt64PatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            ReportExportContents($"Int Value: {BitConverter.ToUInt64(uexp, readingContext.currentUexpOffset)}");
+
+            readingContext.currentUexpOffset += 8;
         }
 
         private static void BoolPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
