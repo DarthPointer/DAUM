@@ -347,7 +347,7 @@ namespace daum
             else if (Program.config.enablePatternReadingHeuristica)
             {
                 readingContext.pattern.Add(structTypeHeuristicaPatternElementName);
-                readingContext.pattern.Add(arrayRepeatPatternElementName);
+                readingContext.pattern.Add(SkipIfPatternEndsPatternElementName);
             }
         }
 
@@ -467,11 +467,11 @@ namespace daum
                 readingContext.pattern.Add(arrayRepeatPatternElementName);
                 readingContext.pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.structure}/{typeName}"));
             }
-            else if (Program.config.enablePatternReadingHeuristica)
+            else if (Program.config.enablePatternReadingHeuristica && readingContext.collectionElementCount != 0)
             {
                 readingContext.pattern.Add(structTypeHeuristicaPatternElementName);
                 readingContext.pattern.Add(SkipIfPatternShorterThanPatternElemetnName);
-                readingContext.pattern.Add("1");
+                readingContext.pattern.Add("2");
                 readingContext.pattern.Add(arrayRepeatPatternElementName);
             }
         }
@@ -553,9 +553,11 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            if (readingContext.pattern.Count < Int32.Parse(readingContext.pattern.TakeArg()))
+            Int32 minimalCountToProceed = Int32.Parse(readingContext.pattern.TakeArg());
+            if (readingContext.pattern.Count < minimalCountToProceed)
             {
                 readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
+                readingContext.pattern.Clear();
 
                 ReportExportContents("Skipping structure due to lack of pattern");
             }
