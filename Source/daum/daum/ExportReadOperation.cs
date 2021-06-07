@@ -27,6 +27,7 @@ namespace daum
 
         public const string UnknownBytesPatternElementName = "UnknownBytes";
         private const string SkipIfPatternEndsPatternElementName = "SkipIfPatternEnds";
+        private const string SkipIfPatternShorterThanPatternElemetnName = "SkipIfPatternShorterThan";
 
         private static Dictionary<string, PatternElementProcesser> patternElementProcessers = new Dictionary<string, PatternElementProcesser>()
         {
@@ -66,6 +67,7 @@ namespace daum
             { "TextPropertyDirtyHack", TextPropertyDirtyHackPatternElementProcesser },
 
             { SkipIfPatternEndsPatternElementName, SkipIfEndPatternElementProcesser },
+            { SkipIfPatternShorterThanPatternElemetnName, SkipIfPatternShorterThanPatternElementProcesser },
 
             { "NTPL", NoneTerminatedPropListPatternElementProcesser }
         };
@@ -133,6 +135,25 @@ namespace daum
                 ReportExportContents("------------------------------");
                 ReportExportContents($"{substructName} is {typeName}");
 
+                List<string> propertyPattern;
+                try
+                {
+                    propertyPattern = Program.GetPattern($"{Program.PatternFolders.property}/{typeName}");
+                }
+                catch
+                {
+                    ReportExportContents($"Failed to find a pattern for property type {typeName}");
+
+                    Int32 assumedSize = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
+                    readingContext.currentUexpOffset += 8;
+
+                    ReportExportContents($"Assumed property size {assumedSize}");
+
+                    ReportExportContents($"Assumed property body {BitConverter.ToString(uexp, readingContext.currentUexpOffset + 1, assumedSize)}");
+
+                    throw;
+                }
+
                 machineState.Push(new ReadingContext()
                 {
                     currentUexpOffset = readingContext.currentUexpOffset,
@@ -140,7 +161,7 @@ namespace daum
                     declaredSizeStartOffset = -1,
                     collectionElementCount = -1,
 
-                    pattern = Program.GetPattern($"{Program.PatternFolders.property}/{typeName}"),
+                    pattern = propertyPattern,
 
                     nextStep = ReadingContext.NextStep.applyPattern,
                     structCategory = ReadingContext.StructCategory.nonExport
@@ -326,7 +347,7 @@ namespace daum
             else if (Program.config.enablePatternReadingHeuristica)
             {
                 readingContext.pattern.Add(structTypeHeuristicaPatternElementName);
-                readingContext.pattern.Add(SkipIfPatternEndsPatternElementName);
+                readingContext.pattern.Add(arrayRepeatPatternElementName);
             }
         }
 
@@ -449,7 +470,9 @@ namespace daum
             else if (Program.config.enablePatternReadingHeuristica)
             {
                 readingContext.pattern.Add(structTypeHeuristicaPatternElementName);
-                readingContext.pattern.Add(SkipIfPatternEndsPatternElementName);
+                readingContext.pattern.Add(SkipIfPatternShorterThanPatternElemetnName);
+                readingContext.pattern.Add("1");
+                readingContext.pattern.Add(arrayRepeatPatternElementName);
             }
         }
 
@@ -519,6 +542,18 @@ namespace daum
             readingContext.pattern.TakeArg();
 
             if (readingContext.pattern.Count == 0)
+            {
+                readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
+
+                ReportExportContents("Skipping structure due to lack of pattern");
+            }
+        }
+
+        private static void SkipIfPatternShorterThanPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            if (readingContext.pattern.Count < Int32.Parse(readingContext.pattern.TakeArg()))
             {
                 readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
 
