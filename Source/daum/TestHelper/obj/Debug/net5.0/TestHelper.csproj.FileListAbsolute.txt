@@ -1,0 +1,17 @@
+D:\Repos\DAUM\Source\daum\TestHelper\bin\Debug\net5.0\TestHelper.exe
+D:\Repos\DAUM\Source\daum\TestHelper\bin\Debug\net5.0\TestHelper.deps.json
+D:\Repos\DAUM\Source\daum\TestHelper\bin\Debug\net5.0\TestHelper.runtimeconfig.json
+D:\Repos\DAUM\Source\daum\TestHelper\bin\Debug\net5.0\TestHelper.runtimeconfig.dev.json
+D:\Repos\DAUM\Source\daum\TestHelper\bin\Debug\net5.0\TestHelper.dll
+D:\Repos\DAUM\Source\daum\TestHelper\bin\Debug\net5.0\ref\TestHelper.dll
+D:\Repos\DAUM\Source\daum\TestHelper\bin\Debug\net5.0\TestHelper.pdb
+D:\Repos\DAUM\Source\daum\TestHelper\bin\Debug\net5.0\DRGOffSetterLib.dll
+D:\Repos\DAUM\Source\daum\TestHelper\obj\Debug\net5.0\TestHelper.GeneratedMSBuildEditorConfig.editorconfig
+D:\Repos\DAUM\Source\daum\TestHelper\obj\Debug\net5.0\TestHelper.AssemblyInfoInputs.cache
+D:\Repos\DAUM\Source\daum\TestHelper\obj\Debug\net5.0\TestHelper.AssemblyInfo.cs
+D:\Repos\DAUM\Source\daum\TestHelper\obj\Debug\net5.0\TestHelper.csproj.CoreCompileInputs.cache
+D:\Repos\DAUM\Source\daum\TestHelper\obj\Debug\net5.0\TestHelper.csproj.CopyComplete
+D:\Repos\DAUM\Source\daum\TestHelper\obj\Debug\net5.0\TestHelper.dll
+D:\Repos\DAUM\Source\daum\TestHelper\obj\Debug\net5.0\ref\TestHelper.dll
+D:\Repos\DAUM\Source\daum\TestHelper\obj\Debug\net5.0\TestHelper.pdb
+D:\Repos\DAUM\Source\daum\TestHelper\obj\Debug\net5.0\TestHelper.genruntimeconfig.cache

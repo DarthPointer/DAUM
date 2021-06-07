@@ -2,7 +2,7 @@
   "profiles": {
     "daum": {
       "commandName": "Project",
-      "commandLineArgs": "D:\\DRGpacker\\input\\Content\\WeaponsNTools\\BoltActionRifle\\WPN_M1000.uasset"
+      "commandLineArgs": "D:\\DRGpacker\\U34exp\\FSD\\Content\\UI\\MainOnscreenHUD\\HUD_MutatorsAndWarnings_3.uasset"
     }
   }
 }

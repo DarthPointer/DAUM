@@ -23,7 +23,7 @@ and T5.FastReload mods.
 Edited file is saved under name of the original one. .offset and .daum and otherfiles are backups created after each command changing anything.
 
 Commands:
-[block] [operation] [operation params]
+Uasset map commands are: [block] [operation] [operation params]
 
 Block: -i for Import Map, -n for Name Map, -edef for export map.
 Operation: -a to add at the end of map, -r to replace record, -edef does not support -r as of now.
@@ -79,8 +79,22 @@ flags, so these are imports' ObjectName strings.
 [-e Default__STE_Revolver_Neurotoxin_C 0] is another import/export, this time it is an export. Remember export name must
 have augmentation after it!
 
+Parser Funcionality:
+
+-eread [export]
+
+export is eiter -i index or name with aug (like Upgradable 0). DO NOT SKIP THE AUG EVEN IF IT IS ZERO!
+
 Auxiliary commands:
 nullconfig: Creates NullConfig.json with all fields you must/can fill in case you broke your config.
+
+ONLY AS APPLICATION LAUNCH PARAMS: -s [Script File Name]:
+Executes all strings of given file as interactive mode commands.
+
+-f [Uasset File Name]: Loads given file as a new active file, uexp is changed automatically. Basically a replacement for exit and launch for the new file.
+
+PreloadPatterns: Load all pattern files contents to boost performance, relevant for script execution mode. Don't use in interactive mode for your own convinience.
+You will have to execute it again to apply changes in pattern files in case you executed it at least once in the current run of the app.
 
 parse: Call DRG Parser to parse current file (if its path is configged, exception otherwise).
 

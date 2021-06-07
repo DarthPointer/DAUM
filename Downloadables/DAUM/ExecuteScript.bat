@@ -1,0 +1,1 @@
+D:\Repos\DAUM\Downloadables\DAUM\daum.exe -s "%1"

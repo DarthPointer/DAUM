@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Newtonsoft.Json;
 using System.IO;
-using DRGOffSetterLib;
 using System.Reflection;
+using System.Text;
+
+using DRGOffSetterLib;
 
 namespace daum
 {
@@ -15,12 +17,19 @@ namespace daum
         private static string exitCommand = "exit";
         private static string printNullConfigCommand = "nullConfig";
         private static string parseCommand = "parse";
+        private static string fromScriptModeKey = "-s";
 
         private static Dictionary<string, Operation> operations = new Dictionary<string, Operation>() {
             { "-n", new NameDefOperation() },
             { "-i", new ImportDefOperation() },
             { "-edef", new ExportDefOperation() },
-            { "-o", new OffSetterCall() }
+
+            { "-eread", new ExportReadOperation() },
+
+            { "-f", new LoadFileOperation() },
+
+            { "-o", new OffSetterCall() },
+            { "PreloadPatterns", new PreloadPatternsOperation() }
         };
 
         public static RunData runData;
@@ -31,34 +40,60 @@ namespace daum
             string toolDir = Assembly.GetExecutingAssembly().Location;
             toolDir = toolDir.Substring(0, toolDir.LastIndexOf('\\') + 1);
 
-            string fileName = GetFileName(args);
+            configPath = toolDir + "Config.json";
+
+            config = GetConfig();
 
             runData = new RunData()
             {
                 toolDir = toolDir,
-                fileName = fileName,
-                fileDir = fileName.Substring(0, fileName.LastIndexOf('\\') + 1)
             };
 
-            configPath = toolDir + "Config.json";
+            List<string> argList = new List<string>(args);
 
-            //Console.WriteLine(configPath);
-            config = GetConfig();
-
-            //Console.WriteLine(config.offsetterPath);
-
-            if (runData.fileName.Length > 0)
+            if (argList[0] == fromScriptModeKey)
             {
-                Span<byte> span = File.ReadAllBytes(runData.fileName);
+                argList.TakeArg();
 
-                if (args.Length > 1)
+
+                string scriptFile = argList.TakeArg();
+                string[] commands = File.ReadAllLines(scriptFile);
+
+                foreach (string command in commands)
                 {
-                    ProcessCommand(ref span, config, runData, new List<string>(args.AsSpan(1).ToArray()), out _, out _);
+                    try
+                    {
+                        List<string> parsedCommand = ParseCommandString(command);
+
+                        ProcessCommand(config, runData, parsedCommand, out bool _, out bool _);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Exception!");
+                        Console.WriteLine(e.ToString());
+                    }
+                }
+
+                return;
+            }
+
+            string fileName = argList.TakeArg();
+
+            LoadFile(fileName);
+
+
+            if (runData.uassetFileName.Length > 0)
+            {
+                byte[] uassetBytes = File.ReadAllBytes(runData.uassetFileName);
+
+                if (argList.Count > 0)
+                {
+                    ProcessCommand(config, runData, argList, out _, out _);
                     return;
                 }
 
                 Console.WriteLine($"Drg Automation Utility for Modding welcomes you!");
-                Console.WriteLine($"Entered interactive mode for file {runData.fileName}");
+                Console.WriteLine($"Entered interactive mode for file {runData.uassetFileName}");
                 Console.WriteLine();
 
                 bool runLoop = true;
@@ -69,10 +104,10 @@ namespace daum
                         List<string> command = ParseCommandString(Console.ReadLine());
                         if (command[0].Length > 0)
                         {
-                            runLoop = ProcessCommand(ref span, config, runData, command, out bool doneSomething, out bool parsed);
+                            runLoop = ProcessCommand(config, runData, command, out bool doneSomething, out bool parsed);
                             if (doneSomething)
                             {
-                                if (config.autoParseAfterSuccess && !parsed) ParseFilesWithDRGPareser(config.drgParserPath, runData.fileName);
+                                if (config.autoParseAfterSuccess && !parsed) ParseFilesWithDRGPareser(config.drgParserPath, runData.uassetFileName);
 
                                 Console.WriteLine("Done!");
                             }
@@ -115,19 +150,8 @@ namespace daum
             }));
         }
 
-        private static string GetFileName(string[] args)
+        private static bool ProcessCommand(Config config, RunData runData, List<string> command, out bool doneSomething, out bool parsed)
         {
-            if (args.Length > 0)
-            {
-                return args[0];
-            }
-
-            return null;
-        }
-
-        private static bool ProcessCommand(ref Span<byte> span, Config config, RunData runData, List<string> command, out bool doneSomething, out bool parsed)
-        {
-            doneSomething = true;
             parsed = false;
 
             if (command.Count > 0)
@@ -143,13 +167,15 @@ namespace daum
                     if (command[0] == printNullConfigCommand)
                     {
                         WriteConfig(new Config(), "NullConfig.json");
+                        doneSomething = false;
                         return true;
                     }
 
                     if (command[0] == parseCommand)
                     {
-                        ParseFilesWithDRGPareser(config.drgParserPath, runData.fileName);
+                        ParseFilesWithDRGPareser(config.drgParserPath, runData.uassetFileName);
                         parsed = true;
+                        doneSomething = false;
                         return true;
                     }
 
@@ -157,21 +183,20 @@ namespace daum
 
                     if (operations.ContainsKey(operationKey))
                     {
-                        string offSetterCallArgs = operations[operationKey].ExecuteAndGetOffSetterAgrs(ref span, command, out bool useStandardBackup);
+                        string offSetterCallArgs = operations[operationKey].ExecuteAndGetOffSetterAgrs(command, out doneSomething, out bool useStandardBackup);
 
                         if (useStandardBackup)
                         {
-                            if (File.Exists(runData.fileName + ".daum")) File.Delete(runData.fileName + ".daum");
-                            Directory.Move(runData.fileName, runData.fileName + ".daum");
-                            File.WriteAllBytes(runData.fileName, span.ToArray());
+                            if (File.Exists(runData.uassetFileName + ".daum")) File.Delete(runData.uassetFileName + ".daum");
+                            Directory.Move(runData.uassetFileName, runData.uassetFileName + ".daum");
+                            File.WriteAllBytes(runData.uassetFileName, Program.runData.uasset);
                         }
 
                         if (offSetterCallArgs != "")
                         {
                             CallOffSetterWithArgs(offSetterCallArgs + " -m -r");
+                            Program.runData.uasset = File.ReadAllBytes(runData.uassetFileName);
                         }
-
-                        span = File.ReadAllBytes(runData.fileName);
 
                         return true;
                     }
@@ -183,9 +208,35 @@ namespace daum
             return true;
         }
 
+        public static List<string> GetPattern(string key)
+        {
+            if (runData.patternsArePreloaded)
+            {
+                return new List<string>(runData.preloadedPatterns[key]);
+            }
+
+            else
+            {
+                return ParseCommandString(File.ReadAllText(runData.toolDir + key));
+            }
+        }
+
+        public static bool PatternExists(string key)
+        {
+            if (runData.patternsArePreloaded)
+            {
+                return runData.preloadedPatterns.ContainsKey(key);
+            }
+
+            else
+            {
+                return File.Exists(runData.toolDir + key);
+            }
+        }
+
         public static void CallOffSetterWithArgs(string offSetterCallArgs, string tgtFile = null)
         {
-            Process offSetter = Process.Start(config.offsetterPath, (tgtFile ?? runData.fileName) + offSetterCallArgs);
+            Process offSetter = Process.Start(config.offsetterPath, (tgtFile ?? runData.uassetFileName) + offSetterCallArgs);
             offSetter.WaitForExit();
         }
 
@@ -274,12 +325,96 @@ namespace daum
             return result;
         }
 
+        public static void LoadFile(string uassetFileName)
+        {
+            runData.uassetFileName = uassetFileName;
+            runData.uexpFileName = uassetFileName.Substring(0, uassetFileName.LastIndexOf('.') + 1) + "uexp";
+            runData.fileDir = uassetFileName.Substring(0, uassetFileName.LastIndexOf('\\') + 1);
+
+            runData.uasset = File.ReadAllBytes(runData.uassetFileName);
+            runData.uexp = File.ReadAllBytes(runData.uexpFileName);
+
+            LoadNames();
+            LoadImports();
+        }
+
+        private static void LoadNames()
+        {
+            Int32 nameCount = BitConverter.ToInt32(runData.uasset, OffsetConstants.nameCountOffset);
+            Int32 currentNameOffset = BitConverter.ToInt32(runData.uasset, OffsetConstants.nameOffsetOffset);
+
+            runData.nameMap = new string[nameCount];
+
+            for (Int32 i = 0; i < nameCount; i++)
+            {
+                runData.nameMap[i] = SizePrefixedStringFromOffsetOffsetAdvance(runData.uasset, ref currentNameOffset);
+
+                currentNameOffset += OffsetConstants.nameHashesSize;
+            }
+        }
+
+        public static string SizePrefixedStringFromOffsetOffsetAdvance(byte[] bytes, ref Int32 offset)
+        {
+            Int32 count = BitConverter.ToInt32(bytes, offset);
+            offset += 4;
+
+            string value = "";
+
+            if (count > 0)
+            {
+                value = Encoding.UTF8.GetString(bytes, offset, count - 1);
+                offset += count;
+            }
+            else if (count < 0)
+            {
+                value = Encoding.Unicode.GetString(bytes, offset, -1*count - 1);
+                offset += -2 * count;
+            }
+
+            return value;
+        }
+
+        private static void LoadImports()
+        {
+            Int32 importCount = BitConverter.ToInt32(runData.uasset, OffsetConstants.importCountOffset);
+            Int32 currentImportOffset = BitConverter.ToInt32(runData.uasset, OffsetConstants.importOffsetOffset);
+
+            runData.importMap = new ImportData[importCount];
+
+            for (Int32 i = 0; i < importCount; i++)
+            {
+                runData.importMap[i] = GetImportDataFromOffset(runData.uasset, currentImportOffset);
+
+                currentImportOffset += OffsetConstants.importDefSize;
+            }
+        }
+
+        private static ImportData GetImportDataFromOffset(byte[] uasset, Int32 offset)
+        {
+            return new ImportData()
+            {
+                packageName = BitConverter.ToInt32(uasset, offset + OffsetConstants.importPackageOffset),
+                className = BitConverter.ToInt32(uasset, offset + OffsetConstants.importClassOffset),
+                outerIndex = BitConverter.ToInt32(uasset, offset + OffsetConstants.importOuterIndexOffset),
+                importName = BitConverter.ToInt32(uasset, offset + OffsetConstants.importNameOffset)
+            };
+        }
 
         public record RunData
         {
-            public string fileName = "";
+            public string uassetFileName = "";
+            public string uexpFileName = "";
+            public byte[] uasset = null;
+            public byte[] uexp = null;
+
+            public string[] nameMap = null;
+            public ImportData[] importMap = null;
+
             public string fileDir = "";
             public string toolDir = "";
+
+            public bool patternsArePreloaded = false;
+            public Dictionary<string, List<string>> preloadedPatterns = new Dictionary<string, List<string>>();
         }
 
         [JsonObject]
@@ -288,6 +423,21 @@ namespace daum
             public string offsetterPath = "";
             public string drgParserPath = "";
             public bool autoParseAfterSuccess = false;
+        }
+
+        public record ImportData
+        {
+            public Int32 packageName;
+            public Int32 className;
+            public Int32 outerIndex;
+            public Int32 importName;
+        }
+
+        public static class PatternFolders
+        {
+            public const string property = "PropertyPatterns";
+            public const string body = "BodyPatterns";
+            public const string structure = "StructPatterns";
         }
     }
 }

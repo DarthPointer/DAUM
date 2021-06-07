@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "TestHelper": {
+      "commandName": "Project",
+      "commandLineArgs": "D:\\DRGpacker\\U34exp\\FSD\\Content\\Art\\DropPod\\Widgets\\BP_Widget_DropPod_Complexity.uasset -ec"
+    }
+  }
+}
