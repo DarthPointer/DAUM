@@ -36,9 +36,13 @@ namespace daum
             { "Skip", SkipPatternElementProcesser },
             { UnknownBytesPatternElementName, UnknownBytesPatternElementProcesser },
 
+            { "UInt16", UInt16PatternElementProcesser },
+
             { "Int32", IntPatternElementProcesser },
             { "UInt32", UIntPatternElementProcesser },
+
             { "UInt64", UInt64PatternElementProcesser },
+
             { "ByteProp", BytePropPatternElementProcesser },
             { "Float32", FloatPatternElementProcesser },
             { "GUID", GUIDPatternElementProcesser },
@@ -193,6 +197,15 @@ namespace daum
             readingContext.declaredSizeStartOffset = readingContext.currentUexpOffset;
 
             ReportExportContents($"Size Start Offset: {readingContext.declaredSizeStartOffset}");
+        }
+
+        private static void UInt16PatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            ReportExportContents($"Int Value: {BitConverter.ToUInt16(uexp, readingContext.currentUexpOffset)}");
+
+            readingContext.currentUexpOffset += 2;
         }
 
         private static void IntPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -432,6 +445,11 @@ namespace daum
             {
                 readingContext.pattern.Add(arrayRepeatPatternElementName);
                 readingContext.pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.structure}/{typeName}"));
+            }
+            else if (Program.config.enablePatternReadingHeuristica)
+            {
+                readingContext.pattern.Add(structTypeHeuristicaPatternElementName);
+                readingContext.pattern.Add(SkipIfPatternEndsPatternElementName);
             }
         }
 
