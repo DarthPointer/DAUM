@@ -42,6 +42,8 @@ namespace daum
 
             configPath = toolDir + "Config.json";
 
+            Console.WriteLine(configPath);
+
             config = GetConfig();
 
             runData = new RunData()
@@ -423,6 +425,8 @@ namespace daum
             public string offsetterPath = "";
             public string drgParserPath = "";
             public bool autoParseAfterSuccess = false;
+
+            public bool enablePatternReadingHeuristica = false;
         }
 
         public record ImportData

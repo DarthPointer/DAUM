@@ -15,7 +15,7 @@ namespace daum
         private static string structLevelIdent = "  ";
         private static string currentStructLevelIdent = "";
 
-        private const string endOfStructConfigName = "None";
+        public const string endOfStructConfigName = "None";
 
         private const string arrayRepeatPatternElementName = "ArrayRepeat";
         private const string arrayRepeatEndPatternElementName = "ArrayRepeatEnd";
@@ -23,13 +23,18 @@ namespace daum
 
         private const string scaledArrayElementsPatternElementName = "ScaledArrayElements";
 
+        private const string structTypeHeuristicaPatternElementName = "structTypeHeuristica";
+
+        public const string UnknownBytesPatternElementName = "UnknownBytes";
+        private const string SkipIfPatternEndsPatternElementName = "SkipIfPatternEnds";
+
         private static Dictionary<string, PatternElementProcesser> patternElementProcessers = new Dictionary<string, PatternElementProcesser>()
         {
             { "Size", SizePatternElementProcesser },
             { "SizeStart", SizeStartPatternElementProcesser },
 
             { "Skip", SkipPatternElementProcesser },
-            { "UnknownBytes", UnknownBytesPatternElementProcesser },
+            { UnknownBytesPatternElementName, UnknownBytesPatternElementProcesser },
 
             { "Int32", IntPatternElementProcesser },
             { "UInt32", UIntPatternElementProcesser },
@@ -45,6 +50,7 @@ namespace daum
             { "Name", NamePatternElementProcesser },
 
             { "StructTypeNameIndex", StructTypeNameIndexPatternElementProcesser },
+            { structTypeHeuristicaPatternElementName, StructTypeHeurisitcaPatternElementProcesser },
 
             { "ArrayElementTypeNameIndex", ArrayElementTypeNameIndexPatternElementProcesser },
             { elementCountPatternElementName, ElementCountPatternElementProcesser },
@@ -55,7 +61,7 @@ namespace daum
 
             { "TextPropertyDirtyHack", TextPropertyDirtyHackPatternElementProcesser },
 
-            { "SkipIfPatternEnds", SkipIfEndPatternElementProcesser },
+            { SkipIfPatternEndsPatternElementName, SkipIfEndPatternElementProcesser },
 
             { "NTPL", NoneTerminatedPropListPatternElementProcesser }
         };
@@ -89,8 +95,8 @@ namespace daum
 
                 pattern = new List<string>() { "NTPL" },
 
-                nextStep = NextStep.substructNameAndType,
-                structCategory = StructCategory.export
+                nextStep = ReadingContext.NextStep.substructNameAndType,
+                structCategory = ReadingContext.StructCategory.export
             });
 
             StepsTilEndOfStruct(Program.runData.uasset, File.ReadAllBytes(Program.runData.uexpFileName));
@@ -107,7 +113,7 @@ namespace daum
         {
             ReadingContext readingContext = machineState.Peek();
 
-            if (readingContext.nextStep == NextStep.substructNameAndType)
+            if (readingContext.nextStep == ReadingContext.NextStep.substructNameAndType)
             {
                 string substructName = FullNameString(uexp, readingContext.currentUexpOffset);
                 readingContext.currentUexpOffset += 8;
@@ -132,8 +138,8 @@ namespace daum
 
                     pattern = Program.GetPattern($"{Program.PatternFolders.property}/{typeName}"),
 
-                    nextStep = NextStep.applyPattern,
-                    structCategory = StructCategory.nonExport
+                    nextStep = ReadingContext.NextStep.applyPattern,
+                    structCategory = ReadingContext.StructCategory.nonExport
                 });
 
                 ExecutePushedReadingContext(uasset, uexp, readingContext);
@@ -141,7 +147,7 @@ namespace daum
                 return true;
             }
 
-            if (readingContext.nextStep == NextStep.applyPattern)
+            if (readingContext.nextStep == ReadingContext.NextStep.applyPattern)
             {
                 if (readingContext.pattern.Count == 0)
                 {
@@ -304,6 +310,34 @@ namespace daum
             {
                 readingContext.pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.structure}/{typeName}"));
             }
+            else if (Program.config.enablePatternReadingHeuristica)
+            {
+                readingContext.pattern.Add(structTypeHeuristicaPatternElementName);
+                readingContext.pattern.Add(SkipIfPatternEndsPatternElementName);
+            }
+        }
+
+        private static void StructTypeHeurisitcaPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            readingContext.pattern.AddRange(PatternHeuristica.AssumedStructPattern(Program.runData, readingContext,
+                out PatternHeuristica.HeuristicaStatus heuristicaStatus));
+
+            switch (heuristicaStatus)
+            {
+                case PatternHeuristica.HeuristicaStatus.Failure:
+                    ReportExportContents("Heuristica failed to give assumed structure pattern");
+                    break;
+
+                case PatternHeuristica.HeuristicaStatus.NonCriticalFailure:
+                    ReportExportContents("Heuristica failed to find a meaningful pattern, boilerplate is provided");
+                    break;
+
+                case PatternHeuristica.HeuristicaStatus.Success:
+                    ReportExportContents("Heuristica proposed a structure pattern, applying it");
+                    break;
+            }
         }
 
         private static void ArrayElementTypeNameIndexPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -375,8 +409,8 @@ namespace daum
                     currentUexpOffset = readingContext.currentUexpOffset,
                     pattern = new List<string>(repeatedPattern),
 
-                    nextStep = NextStep.applyPattern,
-                    structCategory = StructCategory.nonExport,
+                    nextStep = ReadingContext.NextStep.applyPattern,
+                    structCategory = ReadingContext.StructCategory.nonExport,
 
                     declaredSize = scaledElementSize
                 });
@@ -459,7 +493,7 @@ namespace daum
             DecStructLevel();
 
             readingContext.currentUexpOffset = machineState.Pop().currentUexpOffset;
-            readingContext.nextStep = NextStep.applyPattern;
+            readingContext.nextStep = ReadingContext.NextStep.applyPattern;
         }
 
         private static void SkipIfEndPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -504,7 +538,7 @@ namespace daum
         {
             if (FullNameString(uexp, readingContext.currentUexpOffset) != endOfStructConfigName)
             {
-                readingContext.nextStep = NextStep.substructNameAndType;
+                readingContext.nextStep = ReadingContext.NextStep.substructNameAndType;
             }
             else
             {
@@ -543,7 +577,7 @@ namespace daum
             currentStructLevelIdent = "";
         }
 
-        private static string FullNameString(byte[] tgtFile, Int32 offset)
+        public static string FullNameString(byte[] tgtFile, Int32 offset)
         {
             Int32 nameIndex = BitConverter.ToInt32(tgtFile, offset);
             string nameString = Program.runData.nameMap[nameIndex];
@@ -576,7 +610,7 @@ namespace daum
             Console.WriteLine(currentStructLevelIdent + message);
         }
 
-        private class ReadingContext
+        public class ReadingContext
         {
             public Int32 currentUexpOffset;
             public Int32 declaredSize;
@@ -587,18 +621,18 @@ namespace daum
 
             public NextStep nextStep;
             public StructCategory structCategory;
-        }
 
-        private enum NextStep
-        {
-            substructNameAndType,
-            applyPattern
-        }
+            public enum NextStep
+            {
+                substructNameAndType,
+                applyPattern
+            }
 
-        private enum StructCategory
-        {
-            export,
-            nonExport
+            public enum StructCategory
+            {
+                export,
+                nonExport
+            }
         }
     }
 }

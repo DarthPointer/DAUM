@@ -63,7 +63,7 @@ namespace daum
             return bytes;
         }
 
-        protected static string SizePrefixedStringFromOffset(byte[] uasset, Int32 offset)
+        public static string SizePrefixedStringFromOffset(byte[] uasset, Int32 offset)
         {
             return Program.SizePrefixedStringFromOffsetOffsetAdvance(uasset, ref offset);
         }
