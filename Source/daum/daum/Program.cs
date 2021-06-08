@@ -43,8 +43,6 @@ namespace daum
 
             configPath = toolDir + "Config.json";
 
-            Console.WriteLine(configPath);
-
             config = GetConfig();
 
             runData = new RunData()
@@ -193,6 +191,10 @@ namespace daum
                             if (File.Exists(runData.uassetFileName + ".daum")) File.Delete(runData.uassetFileName + ".daum");
                             Directory.Move(runData.uassetFileName, runData.uassetFileName + ".daum");
                             File.WriteAllBytes(runData.uassetFileName, Program.runData.uasset);
+
+                            if (File.Exists(runData.uexpFileName + ".daum")) File.Delete(runData.uexpFileName + ".daum");
+                            Directory.Move(runData.uexpFileName, runData.uexpFileName + ".daum");
+                            File.WriteAllBytes(runData.uexpFileName, Program.runData.uexp);
                         }
 
                         if (offSetterCallArgs != "")

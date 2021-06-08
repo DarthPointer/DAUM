@@ -17,6 +17,7 @@ namespace daum
         public const string NTPLPatternElementName = "NTPL";
 
         public const string skipPatternElementName = "Skip";
+        public const string skipIfPatternEndsPatternElementName = "SkipIfPatternEnds";
 
         public const string sizeStartPatternElementName = "SizeStart";
         public const string sizePatternElementName = "Size";
@@ -24,6 +25,7 @@ namespace daum
         public const string arrayElementTypeNameIndexPatternElementName = "ArrayElementTypeNameIndex";
         public const string structTypeNameIndexPatternElementName = "StructTypeNameIndex";
 
+        public const string float32PatternElementName = "Float32";
         public const string GUIDPatternElementName = "GUID";
 
 

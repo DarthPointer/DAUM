@@ -34,13 +34,31 @@ namespace daum
 
                 { skipContextPatternElementName, SkipContextContextSearcher },
                 { ExportParsingMachine.skipPatternElementName, SkipContextSearcher },
+                { ExportParsingMachine.skipIfPatternEndsPatternElementName, SkipIfEndContextSearcher },
 
-                { ExportParsingMachine.GUIDPatternElementName, ValueContextSearcher }
+                { ExportParsingMachine.GUIDPatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.float32PatternElementName, ValueContextSearcher }
             };
 
         private static Dictionary<string, PrimitiveTypeData> primitiveTypes = new Dictionary<string, PrimitiveTypeData>()
         {
-            //{ ExportParsingMachine.GUIDPatternElementName, new PrimitiveTypeData() { reader = (ref Int32 offset) => {return} } }
+            { ExportParsingMachine.GUIDPatternElementName, new PrimitiveTypeData() {
+                reader = ExportParsingMachine.GUIDFromOffsetToString,
+                writer = WriteGUID,
+                ConstantSize = 16
+            } },
+            { ExportParsingMachine.float32PatternElementName, new PrimitiveTypeData()
+            {
+                reader = (ref Int32 offset) =>
+                {
+                    string result = BitConverter.ToSingle(Program.runData.uexp, offset).ToString(); offset += 4; return result;
+                },
+                writer = (ref Int32 offset, string value) =>
+                {
+                    BitConverter.GetBytes(float.Parse(value)).CopyTo(Program.runData.uexp, offset); offset +=4;
+                },
+                ConstantSize = 4
+            } }
         };
 
         
@@ -256,11 +274,11 @@ namespace daum
                         if (customRunDara.reportSearchSteps)
                         {
                             ExportParsingMachine.ReportExportContents($"Found replacement target at {readingContext.currentUexpOffset}");
-                            readingContext.pattern.Clear();
-                            readingContext.targetContext.Clear();
-
-                            primitiveType.writer(ref readingContext.currentUexpOffset, customRunDara.newValue);
                         }
+                        readingContext.pattern.Clear();
+                        readingContext.targetContext.Clear();
+
+                        primitiveType.writer(ref readingContext.currentUexpOffset, customRunDara.newValue);
                         return;
                     }
                     else
@@ -273,6 +291,28 @@ namespace daum
 
             primitiveType.skip(ref readingContext.currentUexpOffset);
             if (customRunDara.reportSearchSteps) ExportParsingMachine.ReportExportContents($"Skipping {primitiveTypeName} value");
+        }
+
+        private static void SkipIfEndContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            if (readingContext.pattern.Count == 0)
+            {
+                readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
+
+                ExportParsingMachine.ReportExportContents("Skipping structure due to lack of pattern");
+            }
+        }
+
+
+
+        private static void WriteGUID(ref Int32 offset, string value)
+        {
+            byte[] newVal = Guid.Parse(value).ToByteArray();
+
+            newVal.CopyTo(Program.runData.uexp, offset);
+            offset += 16;
         }
 
 
@@ -288,6 +328,14 @@ namespace daum
             public delegate string Reader(ref Int32 offset);
             public delegate void Writer(ref Int32 offset, string value);
             public delegate void Skip(ref Int32 offset);
+
+            public Int32 ConstantSize
+            {
+                set
+                {
+                    skip = (ref Int32 offset) => offset += value;
+                }
+            }
 
             public Reader reader;
             public Writer writer;

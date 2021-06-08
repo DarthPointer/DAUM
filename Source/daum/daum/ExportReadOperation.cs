@@ -17,7 +17,6 @@ namespace daum
         private const string structTypeHeuristicaPatternElementName = "structTypeHeuristica";
 
         public const string UnknownBytesPatternElementName = "UnknownBytes";
-        private const string SkipIfPatternEndsPatternElementName = "SkipIfPatternEnds";
         private const string SkipIfPatternShorterThanPatternElemetnName = "SkipIfPatternShorterThan";
         
         private static Dictionary<string, ExportParsingMachine.PatternElementProcesser> patternElementProcessers =
@@ -28,6 +27,8 @@ namespace daum
 
             { ExportParsingMachine.skipPatternElementName, SkipPatternElementProcesser },
             { UnknownBytesPatternElementName, UnknownBytesPatternElementProcesser },
+            { ExportParsingMachine.skipIfPatternEndsPatternElementName, SkipIfEndPatternElementProcesser },
+            { SkipIfPatternShorterThanPatternElemetnName, SkipIfPatternShorterThanPatternElementProcesser },
 
             { "UInt16", UInt16PatternElementProcesser },
 
@@ -37,7 +38,7 @@ namespace daum
             { "UInt64", UInt64PatternElementProcesser },
 
             { "ByteProp", BytePropPatternElementProcesser },
-            { "Float32", FloatPatternElementProcesser },
+            { ExportParsingMachine.float32PatternElementName, FloatPatternElementProcesser },
             { ExportParsingMachine.GUIDPatternElementName, GUIDPatternElementProcesser },
             { "SPNTS", SizePrefixedNullTermStringPatternElementProcesser },
 
@@ -57,9 +58,6 @@ namespace daum
             { "MapGeneratorTypes", MapGeneratorTypesPatternElementProcesser },
 
             { "TextPropertyDirtyHack", TextPropertyDirtyHackPatternElementProcesser },
-
-            { SkipIfPatternEndsPatternElementName, SkipIfEndPatternElementProcesser },
-            { SkipIfPatternShorterThanPatternElemetnName, SkipIfPatternShorterThanPatternElementProcesser },
 
             { ExportParsingMachine.NTPLPatternElementName, NoneTerminatedPropListPatternElementProcesser }
         };
@@ -240,7 +238,7 @@ namespace daum
             else if (Program.config.enablePatternReadingHeuristica)
             {
                 readingContext.pattern.Add(structTypeHeuristicaPatternElementName);
-                readingContext.pattern.Add(SkipIfPatternEndsPatternElementName);
+                readingContext.pattern.Add(ExportParsingMachine.skipIfPatternEndsPatternElementName);
             }
         }
 
