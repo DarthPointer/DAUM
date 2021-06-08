@@ -14,6 +14,18 @@ namespace daum
 
         public const string endOfStructConfigName = "None";
 
+        public const string NTPLPatternElementName = "NTPL";
+
+        public const string skipPatternElementName = "Skip";
+
+        public const string sizeStartPatternElementName = "SizeStart";
+        public const string sizePatternElementName = "Size";
+
+        public const string arrayElementTypeNameIndexPatternElementName = "ArrayElementTypeNameIndex";
+        public const string structTypeNameIndexPatternElementName = "StructTypeNameIndex";
+
+        public const string GUIDPatternElementName = "GUID";
+
 
 
         private static int currentStructLevel = 0;
@@ -111,6 +123,24 @@ namespace daum
 
             return nameString;
         }
+
+        public static string GUIDFromOffsetToString(ref Int32 offset)
+        {
+            string Quad(Int32 StartPos)
+            {
+                return BitConverter.ToString(Program.runData.uexp, StartPos + 3, 1) + BitConverter.ToString(Program.runData.uexp, StartPos + 2, 1) +
+                    BitConverter.ToString(Program.runData.uexp, StartPos + 1, 1) + BitConverter.ToString(Program.runData.uexp, StartPos + 0, 1);
+            }
+
+            string guid1 = Quad(offset + 0);
+            string guid2 = Quad(offset + 4);
+            string guid3 = Quad(offset + 8);
+            string guid4 = Quad(offset + 12);
+
+            offset += 16;
+
+            return $"GUID: {guid1}-{guid2}-{guid3}-{guid4}";
+        }
     }
 
     class ReadingContext
@@ -124,7 +154,7 @@ namespace daum
         public Int32 contextCollectionElementCountOffset;
 
         public List<string> pattern;
-        public string targetContext;
+        public List<string> targetContext;
 
         public StructCategory structCategory;
 

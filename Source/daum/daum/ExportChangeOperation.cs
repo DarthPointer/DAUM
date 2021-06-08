@@ -24,7 +24,28 @@ namespace daum
         private static Dictionary<string, ExportParsingMachine.PatternElementProcesser> contextSearchProcessers =
             new Dictionary<string, ExportParsingMachine.PatternElementProcesser>()
             {
+                { ExportParsingMachine.NTPLPatternElementName, NTPLContextSearcher },
+
+                { ExportParsingMachine.sizePatternElementName, SizeContextSearcher },
+                { ExportParsingMachine.sizeStartPatternElementName, SizeStartContextSearcher },
+
+                { ExportParsingMachine.arrayElementTypeNameIndexPatternElementName, ArrayElementTypeNameIndexContextSearcher },
+                { ExportParsingMachine.structTypeNameIndexPatternElementName, StructTypeNameIndexContextSearcher },
+
+                { skipContextPatternElementName, SkipContextContextSearcher },
+                { ExportParsingMachine.skipPatternElementName, SkipContextSearcher },
+
+                { ExportParsingMachine.GUIDPatternElementName, ValueContextSearcher }
             };
+
+        private static Dictionary<string, PrimitiveTypeData> primitiveTypes = new Dictionary<string, PrimitiveTypeData>()
+        {
+            //{ ExportParsingMachine.GUIDPatternElementName, new PrimitiveTypeData() { reader = (ref Int32 offset) => {return} } }
+        };
+
+        
+
+        private const string skipContextPatternElementName = "SkipContext";
 
         public override string ExecuteAndGetOffSetterAgrs(List<string> args, out bool doneSomething, out bool useStandardBackup)
         {
@@ -46,6 +67,7 @@ namespace daum
             Int32 exportDefOffset = BitConverter.ToInt32(uasset, exportOffsetOffset) + (exportIndex - 1) * exportDefSize;
             Int32 exportOffset = BitConverter.ToInt32(uasset, exportDefOffset + exportSerialOffsetOffset) -
                 BitConverter.ToInt32(uasset, headerSizeOffset);
+            Int32 exportSize = BitConverter.ToInt32(uasset, exportDefOffset + exportSerialSizeOffset);
 
             string targetContext = args.TakeArg();
             customRunDara.newValue = args.TakeArg();
@@ -60,15 +82,216 @@ namespace daum
             if (customRunDara.reportSearchSteps) ExportParsingMachine.ReportExportContents(
                 $"Searching for {targetContext} in export at {exportOffset} to set new value {customRunDara.newValue}");
 
-            
+            ExportParsingMachine.machineState = new Stack<ReadingContext>();
+            ExportParsingMachine.machineState.Push(new ReadingContext()
+            {
+                currentUexpOffset = exportOffset,
+                declaredSize = exportSize,
+                declaredSizeStartOffset = exportOffset,
+                collectionElementCount = -1,
+
+                pattern = new List<string>() { "NTPL" },
+                patternAlphabet = contextSearchProcessers,
+
+                targetContext = new List<string>(targetContext.Split('/')),
+
+                structCategory = ReadingContext.StructCategory.export
+            });
+
+            ExportParsingMachine.StepsTilEndOfStruct(Program.runData.uasset, Program.runData.uexp);
 
             return "";
         }
+
+        private static void NTPLContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            string targetPropertyName = readingContext.targetContext[0];
+
+            string substructName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 8;
+
+            if (substructName == ExportParsingMachine.endOfStructConfigName)
+            {
+                readingContext.pattern.TakeArg();
+                return;
+            }
+
+            string typeName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 8;
+
+            if (customRunDara.reportSearchSteps)
+            {
+                ExportParsingMachine.ReportExportContents("------------------------------");
+                ExportParsingMachine.ReportExportContents($"{substructName} is {typeName}");
+            }
+
+            List<string> propertyPattern;
+            try
+            {
+                propertyPattern = Program.GetPattern($"{Program.PatternFolders.property}/{typeName}");
+            }
+            catch
+            {
+                ExportParsingMachine.ReportExportContents($"Failed to find a pattern for property type {typeName}");
+
+                Int32 assumedSize = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
+                readingContext.currentUexpOffset += 8;
+
+                ExportParsingMachine.ReportExportContents($"Assumed property size {assumedSize}");
+
+                ExportParsingMachine.ReportExportContents($"Assumed property body {BitConverter.ToString(uexp, readingContext.currentUexpOffset + 1, assumedSize)}");
+
+                throw;
+            }
+
+            if (substructName != targetPropertyName)
+            {
+                propertyPattern.Insert(propertyPattern.IndexOf(ExportParsingMachine.sizeStartPatternElementName) + 1,
+                    skipContextPatternElementName);
+            }
+
+            List<string> targetSubContext = new List<string>(readingContext.targetContext);
+            targetSubContext.RemoveAt(0);
+
+            ExportParsingMachine.machineState.Push(new ReadingContext()
+            {
+                currentUexpOffset = readingContext.currentUexpOffset,
+                declaredSize = -1,
+                declaredSizeStartOffset = -1,
+                collectionElementCount = -1,
+
+                targetContext = targetSubContext,
+
+                pattern = propertyPattern,
+                patternAlphabet = readingContext.patternAlphabet,
+
+                structCategory = ReadingContext.StructCategory.nonExport
+            });
+
+            ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
+        }
+
+        private static void SizeContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            readingContext.declaredSize = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
+            readingContext.contextDeclaredSizeOffset = readingContext.currentUexpOffset;
+
+            if (customRunDara.reportSearchSteps)
+            {
+                ExportParsingMachine.ReportExportContents($"Size is {readingContext.declaredSize}, stored at {readingContext.contextDeclaredSizeOffset}");
+            }
+
+            readingContext.currentUexpOffset += 4;
+        }
+
+        private static void SizeStartContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            readingContext.declaredSizeStartOffset = readingContext.currentUexpOffset;
+            if (customRunDara.reportSearchSteps) ExportParsingMachine.ReportExportContents($"Context Size start at {readingContext.currentUexpOffset}");
+        }
+
+        private static void ArrayElementTypeNameIndexContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            string typeName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 8;
+
+            if (customRunDara.reportSearchSteps) ExportParsingMachine.ReportExportContents($"Array Element Type: {typeName}");
+
+            if (Program.PatternExists($"{Program.PatternFolders.body}/{typeName}"))
+            {
+                readingContext.pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.body}/{typeName}"));
+            }
+        }
+
+        private static void StructTypeNameIndexContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+            string typeName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
+            if (customRunDara.reportSearchSteps) ExportParsingMachine.ReportExportContents($"Structure Type: {typeName}");
+
+            readingContext.currentUexpOffset += 8;
+
+            if (Program.PatternExists($"{Program.PatternFolders.structure}/{typeName}"))
+            {
+                readingContext.pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.structure}/{typeName}"));
+            }
+        }
+
+        private static void SkipContextContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            if (customRunDara.reportSearchSteps) ExportParsingMachine.ReportExportContents("Skipping context");
+
+            readingContext.pattern.Clear();
+            readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
+        }
+
+        private static void SkipContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            Int32 skipLength = Int32.Parse(readingContext.pattern.TakeArg());
+            readingContext.currentUexpOffset += skipLength;
+        }
+
+        private static void ValueContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            string primitiveTypeName = readingContext.pattern.TakeArg();
+            PrimitiveTypeData primitiveType = primitiveTypes[primitiveTypeName];
+
+
+            if (readingContext.targetContext.Count == 2)
+            {
+                Int32 skipsLeft = Int32.Parse(readingContext.targetContext[1]);
+
+                if (primitiveTypeName == readingContext.targetContext[0])
+                {
+                    if (skipsLeft == 0)
+                    {
+                        if (customRunDara.reportSearchSteps)
+                        {
+                            ExportParsingMachine.ReportExportContents($"Found replacement target at {readingContext.currentUexpOffset}");
+                            readingContext.pattern.Clear();
+                            readingContext.targetContext.Clear();
+
+                            primitiveType.writer(ref readingContext.currentUexpOffset, customRunDara.newValue);
+                        }
+                        return;
+                    }
+                    else
+                    {
+                        skipsLeft--;
+                        readingContext.targetContext[1] = skipsLeft.ToString();
+                    }
+                }
+            }
+
+            primitiveType.skip(ref readingContext.currentUexpOffset);
+            if (customRunDara.reportSearchSteps) ExportParsingMachine.ReportExportContents($"Skipping {primitiveTypeName} value");
+        }
+
+
 
         private class ECOCustomRunDara
         {
             public bool reportSearchSteps = false;
             public string newValue = "";
+        }
+
+        private class PrimitiveTypeData
+        {
+            public delegate string Reader(ref Int32 offset);
+            public delegate void Writer(ref Int32 offset, string value);
+            public delegate void Skip(ref Int32 offset);
+
+            public Reader reader;
+            public Writer writer;
+            public Skip skip;
         }
     }
 }

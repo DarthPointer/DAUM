@@ -19,14 +19,14 @@ namespace daum
         public const string UnknownBytesPatternElementName = "UnknownBytes";
         private const string SkipIfPatternEndsPatternElementName = "SkipIfPatternEnds";
         private const string SkipIfPatternShorterThanPatternElemetnName = "SkipIfPatternShorterThan";
-
+        
         private static Dictionary<string, ExportParsingMachine.PatternElementProcesser> patternElementProcessers =
             new Dictionary<string, ExportParsingMachine.PatternElementProcesser>()
         {
-            { "Size", SizePatternElementProcesser },
-            { "SizeStart", SizeStartPatternElementProcesser },
+            { ExportParsingMachine.sizePatternElementName, SizePatternElementProcesser },
+            { ExportParsingMachine.sizeStartPatternElementName, SizeStartPatternElementProcesser },
 
-            { "Skip", SkipPatternElementProcesser },
+            { ExportParsingMachine.skipPatternElementName, SkipPatternElementProcesser },
             { UnknownBytesPatternElementName, UnknownBytesPatternElementProcesser },
 
             { "UInt16", UInt16PatternElementProcesser },
@@ -38,7 +38,7 @@ namespace daum
 
             { "ByteProp", BytePropPatternElementProcesser },
             { "Float32", FloatPatternElementProcesser },
-            { "GUID", GUIDPatternElementProcesser },
+            { ExportParsingMachine.GUIDPatternElementName, GUIDPatternElementProcesser },
             { "SPNTS", SizePrefixedNullTermStringPatternElementProcesser },
 
             { "Bool", BoolPatternElementProcesser },
@@ -46,10 +46,10 @@ namespace daum
             { "ObjectIndex", ObjectIndexPatternElementProcesser },
             { "Name", NamePatternElementProcesser },
 
-            { "StructTypeNameIndex", StructTypeNameIndexPatternElementProcesser },
+            { ExportParsingMachine.structTypeNameIndexPatternElementName, StructTypeNameIndexPatternElementProcesser },
             { structTypeHeuristicaPatternElementName, StructTypeHeurisitcaPatternElementProcesser },
 
-            { "ArrayElementTypeNameIndex", ArrayElementTypeNameIndexPatternElementProcesser },
+            { ExportParsingMachine.arrayElementTypeNameIndexPatternElementName, ArrayElementTypeNameIndexPatternElementProcesser },
             { elementCountPatternElementName, ElementCountPatternElementProcesser },
             { arrayRepeatPatternElementName, ArrayRepeatPatternElementProcesser },
             { "StructPropertyArrayType", StructPropertyArrayTypePatternElementProcesser },
@@ -61,7 +61,7 @@ namespace daum
             { SkipIfPatternEndsPatternElementName, SkipIfEndPatternElementProcesser },
             { SkipIfPatternShorterThanPatternElemetnName, SkipIfPatternShorterThanPatternElementProcesser },
 
-            { "NTPL", NoneTerminatedPropListPatternElementProcesser }
+            { ExportParsingMachine.NTPLPatternElementName, NoneTerminatedPropListPatternElementProcesser }
         };
 
         public override string ExecuteAndGetOffSetterAgrs(List<string> args, out bool doneSomething, out bool useStandardBackup)
@@ -89,7 +89,7 @@ namespace daum
                 declaredSizeStartOffset = uexpStructureOffset,
                 collectionElementCount = -1,
 
-                pattern = new List<string>() { "NTPL" },
+                pattern = new List<string>() { ExportParsingMachine.NTPLPatternElementName },
                 patternAlphabet = patternElementProcessers,
 
                 structCategory = ReadingContext.StructCategory.export
@@ -184,21 +184,7 @@ namespace daum
         private static void GUIDPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
-
-            string Quad(Int32 StartPos)
-            {
-                return BitConverter.ToString(uexp, StartPos + 3, 1) + BitConverter.ToString(uexp, StartPos + 2, 1) +
-                    BitConverter.ToString(uexp, StartPos + 1, 1) + BitConverter.ToString(uexp, StartPos + 0, 1);
-            }
-
-            string guid1 = Quad(readingContext.currentUexpOffset + 0);
-            string guid2 = Quad(readingContext.currentUexpOffset + 4);
-            string guid3 = Quad(readingContext.currentUexpOffset + 8);
-            string guid4 = Quad(readingContext.currentUexpOffset + 12);
-
-            ExportParsingMachine.ReportExportContents($"GUID: {guid1}-{guid2}-{guid3}-{guid4}");
-
-            readingContext.currentUexpOffset += 16;
+            ExportParsingMachine.ReportExportContents(ExportParsingMachine.GUIDFromOffsetToString(ref readingContext.currentUexpOffset));
         }
 
         private static void SizePrefixedNullTermStringPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
