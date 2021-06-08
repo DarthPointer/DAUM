@@ -25,6 +25,7 @@ namespace daum
             { "-edef", new ExportDefOperation() },
 
             { "-eread", new ExportReadOperation() },
+            { "-echange", new ExportChangeOperation() },
 
             { "-f", new LoadFileOperation() },
 

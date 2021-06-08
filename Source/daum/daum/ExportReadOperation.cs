@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 using DRGOffSetterLib;
 
@@ -9,12 +8,6 @@ namespace daum
 {
     public class ExportReadOperation : Operation
     {
-        delegate void PatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext);
-
-        private static int currentStructLevel = 0;
-        private static string structLevelIdent = "  ";
-        private static string currentStructLevelIdent = "";
-
         public const string endOfStructConfigName = "None";
 
         private const string arrayRepeatPatternElementName = "ArrayRepeat";
@@ -29,7 +22,8 @@ namespace daum
         private const string SkipIfPatternEndsPatternElementName = "SkipIfPatternEnds";
         private const string SkipIfPatternShorterThanPatternElemetnName = "SkipIfPatternShorterThan";
 
-        private static Dictionary<string, PatternElementProcesser> patternElementProcessers = new Dictionary<string, PatternElementProcesser>()
+        private static Dictionary<string, ExportParsingMachine.PatternElementProcesser> patternElementProcessers =
+            new Dictionary<string, ExportParsingMachine.PatternElementProcesser>()
         {
             { "Size", SizePatternElementProcesser },
             { "SizeStart", SizeStartPatternElementProcesser },
@@ -72,8 +66,6 @@ namespace daum
             { "NTPL", NoneTerminatedPropListPatternElementProcesser }
         };
 
-        private static Stack<ReadingContext> machineState;
-
         public override string ExecuteAndGetOffSetterAgrs(List<string> args, out bool doneSomething, out bool useStandardBackup)
         {
             useStandardBackup = false;
@@ -90,9 +82,9 @@ namespace daum
                 - BitConverter.ToInt32(Program.runData.uasset, headerSizeOffset);
             Int32 uexpStructureSize = BitConverter.ToInt32(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportSerialSizeOffset);
 
-            ResetSLIString();
-            machineState = new Stack<ReadingContext>();
-            machineState.Push(new ReadingContext()
+            ExportParsingMachine.ResetSLIString();
+            ExportParsingMachine.machineState = new Stack<ReadingContext>();
+            ExportParsingMachine.machineState.Push(new ReadingContext()
             {
                 currentUexpOffset = uexpStructureOffset,
                 declaredSize = uexpStructureSize,
@@ -100,100 +92,18 @@ namespace daum
                 collectionElementCount = -1,
 
                 pattern = new List<string>() { "NTPL" },
+                patternAlphabet = patternElementProcessers,
 
                 nextStep = ReadingContext.NextStep.substructNameAndType,
                 structCategory = ReadingContext.StructCategory.export
             });
 
-            StepsTilEndOfStruct(Program.runData.uasset, File.ReadAllBytes(Program.runData.uexpFileName));
+            ExportParsingMachine.StepsTilEndOfStruct(Program.runData.uasset, File.ReadAllBytes(Program.runData.uexpFileName));
 
             return "";
         }
 
-        private static void StepsTilEndOfStruct(byte[] uasset, byte[] uexp)
-        {
-            while (Step(uasset, uexp));
-        }
-
-        private static bool Step(byte[] uasset, byte[] uexp)
-        {
-            ReadingContext readingContext = machineState.Peek();
-
-            if (readingContext.nextStep == ReadingContext.NextStep.substructNameAndType)
-            {
-                string substructName = FullNameString(uexp, readingContext.currentUexpOffset);
-                readingContext.currentUexpOffset += 8;
-
-                if (substructName == endOfStructConfigName)
-                {
-                    return false;
-                }
-
-                string typeName = FullNameString(uexp, readingContext.currentUexpOffset);
-                readingContext.currentUexpOffset += 8;
-
-                ReportExportContents("------------------------------");
-                ReportExportContents($"{substructName} is {typeName}");
-
-                List<string> propertyPattern;
-                try
-                {
-                    propertyPattern = Program.GetPattern($"{Program.PatternFolders.property}/{typeName}");
-                }
-                catch
-                {
-                    ReportExportContents($"Failed to find a pattern for property type {typeName}");
-
-                    Int32 assumedSize = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
-                    readingContext.currentUexpOffset += 8;
-
-                    ReportExportContents($"Assumed property size {assumedSize}");
-
-                    ReportExportContents($"Assumed property body {BitConverter.ToString(uexp, readingContext.currentUexpOffset + 1, assumedSize)}");
-
-                    throw;
-                }
-
-                machineState.Push(new ReadingContext()
-                {
-                    currentUexpOffset = readingContext.currentUexpOffset,
-                    declaredSize = -1,
-                    declaredSizeStartOffset = -1,
-                    collectionElementCount = -1,
-
-                    pattern = propertyPattern,
-
-                    nextStep = ReadingContext.NextStep.applyPattern,
-                    structCategory = ReadingContext.StructCategory.nonExport
-                });
-
-                ExecutePushedReadingContext(uasset, uexp, readingContext);
-
-                return true;
-            }
-
-            if (readingContext.nextStep == ReadingContext.NextStep.applyPattern)
-            {
-                if (readingContext.pattern.Count == 0)
-                {
-                    return false;
-                }
-
-                if (patternElementProcessers.ContainsKey(readingContext.pattern[0]))
-                {
-                    patternElementProcessers[readingContext.pattern[0]](uasset, uexp, readingContext);
-                }
-                else
-                {
-                    readingContext.currentUexpOffset += 4;
-                    readingContext.pattern.TakeArg();
-                }
-
-                return true;
-            }
-
-            return false;
-        }
+        
 
         private static void SizePatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
@@ -201,7 +111,7 @@ namespace daum
             readingContext.currentUexpOffset += 4;
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"Size: {readingContext.declaredSize}");
+            ExportParsingMachine.ReportExportContents($"Size: {readingContext.declaredSize}");
         }
 
         private static void SkipPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -217,14 +127,14 @@ namespace daum
             
             readingContext.declaredSizeStartOffset = readingContext.currentUexpOffset;
 
-            ReportExportContents($"Size Start Offset: {readingContext.declaredSizeStartOffset}");
+            ExportParsingMachine.ReportExportContents($"Size Start Offset: {readingContext.declaredSizeStartOffset}");
         }
 
         private static void UInt16PatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"Int Value: {BitConverter.ToUInt16(uexp, readingContext.currentUexpOffset)}");
+            ExportParsingMachine.ReportExportContents($"Int Value: {BitConverter.ToUInt16(uexp, readingContext.currentUexpOffset)}");
 
             readingContext.currentUexpOffset += 2;
         }
@@ -233,7 +143,7 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"Int Value: {BitConverter.ToInt32(uexp, readingContext.currentUexpOffset)}");
+            ExportParsingMachine.ReportExportContents($"Int Value: {BitConverter.ToInt32(uexp, readingContext.currentUexpOffset)}");
 
             readingContext.currentUexpOffset += 4;
         }
@@ -242,7 +152,7 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"Int Value: {BitConverter.ToUInt32(uexp, readingContext.currentUexpOffset)}");
+            ExportParsingMachine.ReportExportContents($"Int Value: {BitConverter.ToUInt32(uexp, readingContext.currentUexpOffset)}");
 
             readingContext.currentUexpOffset += 4;
         }
@@ -251,7 +161,7 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"Int Value: {BitConverter.ToUInt64(uexp, readingContext.currentUexpOffset)}");
+            ExportParsingMachine.ReportExportContents($"Int Value: {BitConverter.ToUInt64(uexp, readingContext.currentUexpOffset)}");
 
             readingContext.currentUexpOffset += 8;
         }
@@ -260,7 +170,7 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"Bool Value: {BitConverter.ToBoolean(uexp, readingContext.currentUexpOffset)}");
+            ExportParsingMachine.ReportExportContents($"Bool Value: {BitConverter.ToBoolean(uexp, readingContext.currentUexpOffset)}");
 
             readingContext.currentUexpOffset += 1;
         }
@@ -269,7 +179,7 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"Float Value: {BitConverter.ToSingle(uexp, readingContext.currentUexpOffset)}");
+            ExportParsingMachine.ReportExportContents($"Float Value: {BitConverter.ToSingle(uexp, readingContext.currentUexpOffset)}");
 
             readingContext.currentUexpOffset += 4;
         }
@@ -289,7 +199,7 @@ namespace daum
             string guid3 = Quad(readingContext.currentUexpOffset + 8);
             string guid4 = Quad(readingContext.currentUexpOffset + 12);
 
-            ReportExportContents($"GUID: {guid1}-{guid2}-{guid3}-{guid4}");
+            ExportParsingMachine.ReportExportContents($"GUID: {guid1}-{guid2}-{guid3}-{guid4}");
 
             readingContext.currentUexpOffset += 16;
         }
@@ -300,14 +210,14 @@ namespace daum
 
             string value = Program.SizePrefixedStringFromOffsetOffsetAdvance(uexp, ref readingContext.currentUexpOffset);
 
-            ReportExportContents($"String: {value}");
+            ExportParsingMachine.ReportExportContents($"String: {value}");
         }
 
         private static void BytePropPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"Bytes Value: {BitConverter.ToString(uexp, readingContext.currentUexpOffset, readingContext.declaredSize)}");
+            ExportParsingMachine.ReportExportContents($"Bytes Value: {BitConverter.ToString(uexp, readingContext.currentUexpOffset, readingContext.declaredSize)}");
 
             readingContext.currentUexpOffset += readingContext.declaredSize;
         }
@@ -318,7 +228,7 @@ namespace daum
 
             Int32 count = Int32.Parse(readingContext.pattern.TakeArg());
 
-            ReportExportContents($"Unknown Bytes: {BitConverter.ToString(uexp, readingContext.currentUexpOffset, count)}");
+            ExportParsingMachine.ReportExportContents($"Unknown Bytes: {BitConverter.ToString(uexp, readingContext.currentUexpOffset, count)}");
 
             readingContext.currentUexpOffset += count;
         }
@@ -327,7 +237,7 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            ReportExportContents($"Name: {FullNameString(uexp, readingContext.currentUexpOffset)}");
+            ExportParsingMachine.ReportExportContents($"Name: {ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset)}");
 
             readingContext.currentUexpOffset += 8;
         }
@@ -335,8 +245,8 @@ namespace daum
         private static void StructTypeNameIndexPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
-            string typeName = FullNameString(uexp, readingContext.currentUexpOffset);
-            ReportExportContents($"Structure Type: {typeName}");
+            string typeName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
+            ExportParsingMachine.ReportExportContents($"Structure Type: {typeName}");
 
             readingContext.currentUexpOffset += 8;
 
@@ -361,15 +271,15 @@ namespace daum
             switch (heuristicaStatus)
             {
                 case PatternHeuristica.HeuristicaStatus.Failure:
-                    ReportExportContents("Heuristica failed to give assumed structure pattern");
+                    ExportParsingMachine.ReportExportContents("Heuristica failed to give assumed structure pattern");
                     break;
 
                 case PatternHeuristica.HeuristicaStatus.NonCriticalFailure:
-                    ReportExportContents("Heuristica failed to find a meaningful pattern, boilerplate is provided");
+                    ExportParsingMachine.ReportExportContents("Heuristica failed to find a meaningful pattern, boilerplate is provided");
                     break;
 
                 case PatternHeuristica.HeuristicaStatus.Success:
-                    ReportExportContents("Heuristica proposed a structure pattern, applying it");
+                    ExportParsingMachine.ReportExportContents("Heuristica proposed a structure pattern, applying it");
                     break;
             }
         }
@@ -378,10 +288,10 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            string typeName = FullNameString(uexp, readingContext.currentUexpOffset);
+            string typeName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 8;
 
-            ReportExportContents($"Array Element Type: {typeName}");
+            ExportParsingMachine.ReportExportContents($"Array Element Type: {typeName}");
 
             if (Program.PatternExists($"{Program.PatternFolders.body}/{typeName}"))
             {
@@ -398,7 +308,7 @@ namespace daum
 
             readingContext.collectionElementCount = elementCount;
 
-            ReportExportContents($"Elements Count: {elementCount}");
+            ExportParsingMachine.ReportExportContents($"Elements Count: {elementCount}");
         }
 
         private static void ArrayRepeatPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -436,12 +346,14 @@ namespace daum
 
             for (int i = 0; i < readingContext.collectionElementCount; i++)
             {
-                ReportExportContents($"Element {i}");
+                ExportParsingMachine.ReportExportContents($"Element {i}");
 
-                machineState.Push(new ReadingContext()
+                ExportParsingMachine.machineState.Push(new ReadingContext()
                 {
                     currentUexpOffset = readingContext.currentUexpOffset,
+
                     pattern = new List<string>(repeatedPattern),
+                    patternAlphabet = readingContext.patternAlphabet,
 
                     nextStep = ReadingContext.NextStep.applyPattern,
                     structCategory = ReadingContext.StructCategory.nonExport,
@@ -449,7 +361,7 @@ namespace daum
                     declaredSize = scaledElementSize
                 });
 
-                ExecutePushedReadingContext(uasset, uexp, readingContext);
+                ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
             }
         }
 
@@ -457,10 +369,10 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            string typeName = FullNameString(uexp, readingContext.currentUexpOffset);
+            string typeName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 8;
 
-            ReportExportContents($"Element structure type: {typeName}");
+            ExportParsingMachine.ReportExportContents($"Element structure type: {typeName}");
 
             if (Program.PatternExists($"{Program.PatternFolders.structure}/{typeName}"))
             {
@@ -480,13 +392,13 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            string tKey = FullNameString(uexp, readingContext.currentUexpOffset);
+            string tKey = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 8;
 
-            string tVal = FullNameString(uexp, readingContext.currentUexpOffset);
+            string tVal = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 8;
 
-            ReportExportContents($"<{tKey}, {tVal}>");
+            ExportParsingMachine.ReportExportContents($"<{tKey}, {tVal}>");
 
             if (Program.PatternExists($"{Program.PatternFolders.body}/{tKey}") && Program.PatternExists($"{Program.PatternFolders.body}/{tVal}"))
             {
@@ -522,19 +434,7 @@ namespace daum
             //I don't. I hope the author of that idea got a proper remedy.
 
             readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
-            ReportExportContents("Text Property support is postponed. ETA depends on readability of UE shitcode.");
-        }
-
-        private static void ExecutePushedReadingContext(byte[] uasset, byte[] uexp, ReadingContext readingContext)
-        {
-            IncStructLevel();
-
-            StepsTilEndOfStruct(uasset, uexp);
-
-            DecStructLevel();
-
-            readingContext.currentUexpOffset = machineState.Pop().currentUexpOffset;
-            readingContext.nextStep = ReadingContext.NextStep.applyPattern;
+            ExportParsingMachine.ReportExportContents("Text Property support is postponed. ETA depends on readability of UE shitcode.");
         }
 
         private static void SkipIfEndPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -545,7 +445,7 @@ namespace daum
             {
                 readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
 
-                ReportExportContents("Skipping structure due to lack of pattern");
+                ExportParsingMachine.ReportExportContents("Skipping structure due to lack of pattern");
             }
         }
 
@@ -559,7 +459,7 @@ namespace daum
                 readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
                 readingContext.pattern.Clear();
 
-                ReportExportContents("Skipping structure due to lack of pattern");
+                ExportParsingMachine.ReportExportContents("Skipping structure due to lack of pattern");
             }
         }
 
@@ -586,12 +486,12 @@ namespace daum
                 valueStr = $"Export:{ExportByIndexFullNameString(uasset, uexp, index)}";
             }
 
-            ReportExportContents($"Object: {valueStr}");
+            ExportParsingMachine.ReportExportContents($"Object: {valueStr}");
         }
 
         private static void NoneTerminatedPropListPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
-            if (FullNameString(uexp, readingContext.currentUexpOffset) != endOfStructConfigName)
+            if (ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset) != endOfStructConfigName)
             {
                 readingContext.nextStep = ReadingContext.NextStep.substructNameAndType;
             }
@@ -602,92 +502,18 @@ namespace daum
             }
         }
 
-        private static void IncStructLevel()
-        {
-            currentStructLevel++;
-
-            UpdateCurrentSLIString();
-        }
-
-        private static void DecStructLevel()
-        {
-            currentStructLevel--;
-
-            UpdateCurrentSLIString();
-        }
-
-        private static void UpdateCurrentSLIString()
-        {
-            currentStructLevelIdent = "";
-
-            for (int i = 0; i < currentStructLevel; i++)
-            {
-                currentStructLevelIdent += structLevelIdent;
-            }
-        }
-
-        private static void ResetSLIString()
-        {
-            currentStructLevel = 0;
-            currentStructLevelIdent = "";
-        }
-
-        public static string FullNameString(byte[] tgtFile, Int32 offset)
-        {
-            Int32 nameIndex = BitConverter.ToInt32(tgtFile, offset);
-            string nameString = Program.runData.nameMap[nameIndex];
-
-            Int32 nameAug = BitConverter.ToInt32(tgtFile, offset + 4);
-            if (nameAug != 0)
-            {
-                nameString += $"_{nameAug}";
-            }
-
-            return nameString;
-        }
-
         private static string ImportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 importIndex)
         {
             importIndex = -1*importIndex - 1;
             Int32 firstImportOffset = BitConverter.ToInt32(uasset, OffsetConstants.importOffsetOffset);
-            return FullNameString(uasset, firstImportOffset + importIndex * OffsetConstants.importDefSize + OffsetConstants.importNameOffset);
+            return ExportParsingMachine.FullNameString(uasset, firstImportOffset + importIndex * OffsetConstants.importDefSize + OffsetConstants.importNameOffset);
         }
 
         private static string ExportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 exportIndex)
         {
             exportIndex = exportIndex - 1;
             Int32 firstExportOffset = BitConverter.ToInt32(uasset, exportOffsetOffset);
-            return FullNameString(uasset, firstExportOffset + exportIndex * exportDefSize + exportNameOffset);
-        }
-
-        private static void ReportExportContents(string message)
-        {
-            Console.WriteLine(currentStructLevelIdent + message);
-        }
-
-        public class ReadingContext
-        {
-            public Int32 currentUexpOffset;
-            public Int32 declaredSize;
-            public Int32 declaredSizeStartOffset;
-            public Int32 collectionElementCount;
-
-            public List<string> pattern;
-
-            public NextStep nextStep;
-            public StructCategory structCategory;
-
-            public enum NextStep
-            {
-                substructNameAndType,
-                applyPattern
-            }
-
-            public enum StructCategory
-            {
-                export,
-                nonExport
-            }
+            return ExportParsingMachine.FullNameString(uasset, firstExportOffset + exportIndex * exportDefSize + exportNameOffset);
         }
     }
 }

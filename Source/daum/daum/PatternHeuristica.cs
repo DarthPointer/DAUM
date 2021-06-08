@@ -15,7 +15,7 @@ namespace daum
             Success = 2
         }
 
-        public static List<string> AssumedStructPattern(Program.RunData runData, ExportReadOperation.ReadingContext readingContext, out HeuristicaStatus heuristicaStatus)
+        public static List<string> AssumedStructPattern(Program.RunData runData, ReadingContext readingContext, out HeuristicaStatus heuristicaStatus)
         {
             Int32 assumedEndOfStructOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
             Int32 assumedSize = readingContext.collectionElementCount > 0 ?
@@ -24,7 +24,7 @@ namespace daum
 
             try
             {
-                string assumedLastName = ExportReadOperation.FullNameString(runData.uexp, assumedEndOfStructOffset - 8);
+                string assumedLastName = ExportParsingMachine.FullNameString(runData.uexp, assumedEndOfStructOffset - 8);
 
                 if (assumedLastName == ExportReadOperation.endOfStructConfigName)
                 {
