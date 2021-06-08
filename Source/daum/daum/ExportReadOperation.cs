@@ -8,8 +8,6 @@ namespace daum
 {
     public class ExportReadOperation : Operation
     {
-        public const string endOfStructConfigName = "None";
-
         private const string arrayRepeatPatternElementName = "ArrayRepeat";
         private const string arrayRepeatEndPatternElementName = "ArrayRepeatEnd";
         private const string elementCountPatternElementName = "ElementCount";
@@ -94,7 +92,6 @@ namespace daum
                 pattern = new List<string>() { "NTPL" },
                 patternAlphabet = patternElementProcessers,
 
-                nextStep = ReadingContext.NextStep.substructNameAndType,
                 structCategory = ReadingContext.StructCategory.export
             });
 
@@ -355,7 +352,6 @@ namespace daum
                     pattern = new List<string>(repeatedPattern),
                     patternAlphabet = readingContext.patternAlphabet,
 
-                    nextStep = ReadingContext.NextStep.applyPattern,
                     structCategory = ReadingContext.StructCategory.nonExport,
 
                     declaredSize = scaledElementSize
@@ -491,15 +487,54 @@ namespace daum
 
         private static void NoneTerminatedPropListPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
-            if (ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset) != endOfStructConfigName)
-            {
-                readingContext.nextStep = ReadingContext.NextStep.substructNameAndType;
-            }
-            else
+            string substructName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 8;
+
+            if (substructName == ExportParsingMachine.endOfStructConfigName)
             {
                 readingContext.pattern.TakeArg();
-                readingContext.currentUexpOffset += 8;
+                return;
             }
+
+            string typeName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 8;
+
+            ExportParsingMachine.ReportExportContents("------------------------------");
+            ExportParsingMachine.ReportExportContents($"{substructName} is {typeName}");
+
+            List<string> propertyPattern;
+            try
+            {
+                propertyPattern = Program.GetPattern($"{Program.PatternFolders.property}/{typeName}");
+            }
+            catch
+            {
+                ExportParsingMachine.ReportExportContents($"Failed to find a pattern for property type {typeName}");
+
+                Int32 assumedSize = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
+                readingContext.currentUexpOffset += 8;
+
+                ExportParsingMachine.ReportExportContents($"Assumed property size {assumedSize}");
+
+                ExportParsingMachine.ReportExportContents($"Assumed property body {BitConverter.ToString(uexp, readingContext.currentUexpOffset + 1, assumedSize)}");
+
+                throw;
+            }
+
+            ExportParsingMachine.machineState.Push(new ReadingContext()
+            {
+                currentUexpOffset = readingContext.currentUexpOffset,
+                declaredSize = -1,
+                declaredSizeStartOffset = -1,
+                collectionElementCount = -1,
+
+                pattern = propertyPattern,
+                patternAlphabet = readingContext.patternAlphabet,
+
+                structCategory = ReadingContext.StructCategory.nonExport
+            });
+
+            ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
         }
 
         private static string ImportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 importIndex)

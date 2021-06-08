@@ -31,81 +31,23 @@ namespace daum
         {
             ReadingContext readingContext = machineState.Peek();
 
-            if (readingContext.nextStep == ReadingContext.NextStep.substructNameAndType)
+
+            if (readingContext.pattern.Count == 0)
             {
-                string substructName = FullNameString(uexp, readingContext.currentUexpOffset);
-                readingContext.currentUexpOffset += 8;
-
-                if (substructName == endOfStructConfigName)
-                {
-                    return false;
-                }
-
-                string typeName = FullNameString(uexp, readingContext.currentUexpOffset);
-                readingContext.currentUexpOffset += 8;
-
-                ReportExportContents("------------------------------");
-                ReportExportContents($"{substructName} is {typeName}");
-
-                List<string> propertyPattern;
-                try
-                {
-                    propertyPattern = Program.GetPattern($"{Program.PatternFolders.property}/{typeName}");
-                }
-                catch
-                {
-                    ReportExportContents($"Failed to find a pattern for property type {typeName}");
-
-                    Int32 assumedSize = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
-                    readingContext.currentUexpOffset += 8;
-
-                    ReportExportContents($"Assumed property size {assumedSize}");
-
-                    ReportExportContents($"Assumed property body {BitConverter.ToString(uexp, readingContext.currentUexpOffset + 1, assumedSize)}");
-
-                    throw;
-                }
-
-                machineState.Push(new ReadingContext()
-                {
-                    currentUexpOffset = readingContext.currentUexpOffset,
-                    declaredSize = -1,
-                    declaredSizeStartOffset = -1,
-                    collectionElementCount = -1,
-
-                    pattern = propertyPattern,
-                    patternAlphabet = readingContext.patternAlphabet,
-
-                    nextStep = ReadingContext.NextStep.applyPattern,
-                    structCategory = ReadingContext.StructCategory.nonExport
-                });
-
-                ExecutePushedReadingContext(uasset, uexp, readingContext);
-
-                return true;
+                return false;
             }
 
-            if (readingContext.nextStep == ReadingContext.NextStep.applyPattern)
+            if (readingContext.patternAlphabet.ContainsKey(readingContext.pattern[0]))
             {
-                if (readingContext.pattern.Count == 0)
-                {
-                    return false;
-                }
-
-                if (readingContext.patternAlphabet.ContainsKey(readingContext.pattern[0]))
-                {
-                    readingContext.patternAlphabet[readingContext.pattern[0]](uasset, uexp, readingContext);
-                }
-                else
-                {
-                    readingContext.currentUexpOffset += 4;
-                    readingContext.pattern.TakeArg();
-                }
-
-                return true;
+                readingContext.patternAlphabet[readingContext.pattern[0]](uasset, uexp, readingContext);
+            }
+            else
+            {
+                readingContext.currentUexpOffset += 4;
+                readingContext.pattern.TakeArg();
             }
 
-            return false;
+            return true;
         }
 
         public static void ExecutePushedReadingContext(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -117,7 +59,6 @@ namespace daum
             DecStructLevel();
 
             readingContext.currentUexpOffset = machineState.Pop().currentUexpOffset;
-            readingContext.nextStep = ReadingContext.NextStep.applyPattern;
         }
 
 
@@ -181,16 +122,9 @@ namespace daum
 
         public List<string> pattern;
 
-        public NextStep nextStep;
         public StructCategory structCategory;
 
         public Dictionary<string, ExportParsingMachine.PatternElementProcesser> patternAlphabet;
-
-        public enum NextStep
-        {
-            substructNameAndType,
-            applyPattern
-        }
 
         public enum StructCategory
         {

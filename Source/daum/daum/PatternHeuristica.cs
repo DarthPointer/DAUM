@@ -26,7 +26,7 @@ namespace daum
             {
                 string assumedLastName = ExportParsingMachine.FullNameString(runData.uexp, assumedEndOfStructOffset - 8);
 
-                if (assumedLastName == ExportReadOperation.endOfStructConfigName)
+                if (assumedLastName == ExportParsingMachine.endOfStructConfigName)
                 {
                     heuristicaStatus = HeuristicaStatus.Success;
                     return new List<string>() { "NTPL" };
