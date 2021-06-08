@@ -95,7 +95,7 @@ namespace daum
                 structCategory = ReadingContext.StructCategory.export
             });
 
-            ExportParsingMachine.StepsTilEndOfStruct(Program.runData.uasset, File.ReadAllBytes(Program.runData.uexpFileName));
+            ExportParsingMachine.StepsTilEndOfStruct(Program.runData.uasset, Program.runData.uexp);
 
             return "";
         }

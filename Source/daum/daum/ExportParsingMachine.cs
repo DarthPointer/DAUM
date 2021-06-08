@@ -120,7 +120,11 @@ namespace daum
         public Int32 declaredSizeStartOffset;
         public Int32 collectionElementCount;
 
+        public Int32 contextDeclaredSizeOffset;
+        public Int32 contextCollectionElementCountOffset;
+
         public List<string> pattern;
+        public string targetContext;
 
         public StructCategory structCategory;
 
