@@ -8,16 +8,9 @@ namespace daum
 {
     public class ExportReadOperation : Operation
     {
-        private const string arrayRepeatPatternElementName = "ArrayRepeat";
-        private const string arrayRepeatEndPatternElementName = "ArrayRepeatEnd";
-        private const string elementCountPatternElementName = "ElementCount";
-
-        private const string scaledArrayElementsPatternElementName = "ScaledArrayElements";
-
         private const string structTypeHeuristicaPatternElementName = "structTypeHeuristica";
 
         public const string UnknownBytesPatternElementName = "UnknownBytes";
-        private const string SkipIfPatternShorterThanPatternElemetnName = "SkipIfPatternShorterThan";
         
         private static Dictionary<string, ExportParsingMachine.PatternElementProcesser> patternElementProcessers =
             new Dictionary<string, ExportParsingMachine.PatternElementProcesser>()
@@ -28,7 +21,7 @@ namespace daum
             { ExportParsingMachine.skipPatternElementName, SkipPatternElementProcesser },
             { UnknownBytesPatternElementName, UnknownBytesPatternElementProcesser },
             { ExportParsingMachine.skipIfPatternEndsPatternElementName, SkipIfEndPatternElementProcesser },
-            { SkipIfPatternShorterThanPatternElemetnName, SkipIfPatternShorterThanPatternElementProcesser },
+            { ExportParsingMachine.skipIfPatternShorterThanPatternElemetnName, SkipIfPatternShorterThanPatternElementProcesser },
 
             { "UInt16", UInt16PatternElementProcesser },
 
@@ -51,9 +44,9 @@ namespace daum
             { structTypeHeuristicaPatternElementName, StructTypeHeurisitcaPatternElementProcesser },
 
             { ExportParsingMachine.arrayElementTypeNameIndexPatternElementName, ArrayElementTypeNameIndexPatternElementProcesser },
-            { elementCountPatternElementName, ElementCountPatternElementProcesser },
-            { arrayRepeatPatternElementName, ArrayRepeatPatternElementProcesser },
-            { "StructPropertyArrayType", StructPropertyArrayTypePatternElementProcesser },
+            { ExportParsingMachine.elementCountPatternElementName, ElementCountPatternElementProcesser },
+            { ExportParsingMachine.arrayRepeatPatternElementName, ArrayRepeatPatternElementProcesser },
+            { ExportParsingMachine.structPropertyArrayTypePatternElementName, StructPropertyArrayTypePatternElementProcesser },
 
             { "MapGeneratorTypes", MapGeneratorTypesPatternElementProcesser },
 
@@ -302,7 +295,8 @@ namespace daum
 
             // Some element types have no context-free size determination apart from assumed elements total size and count.
             // Also ignore it if we have 0 elements because it is pointless and causes exception.
-            if (readingContext.pattern[0] == scaledArrayElementsPatternElementName && readingContext.collectionElementCount != 0)
+            if (readingContext.pattern[0] == ExportParsingMachine.scaledArrayElementsPatternElementName &&
+                readingContext.collectionElementCount != 0)
             {
                 readingContext.pattern.TakeArg();
                 scaledElementSize = (readingContext.declaredSizeStartOffset + readingContext.declaredSize -
@@ -322,7 +316,7 @@ namespace daum
             {
                 string element = readingContext.pattern.TakeArg();
 
-                if (element == arrayRepeatEndPatternElementName) break;
+                if (element == ExportParsingMachine.arrayRepeatEndPatternElementName) break;
 
                 repeatedPattern.Add(element);
             }
@@ -358,15 +352,15 @@ namespace daum
 
             if (Program.PatternExists($"{Program.PatternFolders.structure}/{typeName}"))
             {
-                readingContext.pattern.Add(arrayRepeatPatternElementName);
+                readingContext.pattern.Add(ExportParsingMachine.arrayRepeatPatternElementName);
                 readingContext.pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.structure}/{typeName}"));
             }
             else if (Program.config.enablePatternReadingHeuristica && readingContext.collectionElementCount != 0)
             {
                 readingContext.pattern.Add(structTypeHeuristicaPatternElementName);
-                readingContext.pattern.Add(SkipIfPatternShorterThanPatternElemetnName);
+                readingContext.pattern.Add(ExportParsingMachine.skipIfPatternShorterThanPatternElemetnName);
                 readingContext.pattern.Add("2");
-                readingContext.pattern.Add(arrayRepeatPatternElementName);
+                readingContext.pattern.Add(ExportParsingMachine.arrayRepeatPatternElementName);
             }
         }
 
@@ -387,15 +381,16 @@ namespace daum
                 List<string> keyPattern = Program.GetPattern($"{Program.PatternFolders.body}/{tKey}");
                 List<string> valPattern = Program.GetPattern($"{Program.PatternFolders.body}/{tVal}");
 
-                if (keyPattern.TakeArg() == arrayRepeatPatternElementName && valPattern.TakeArg() == arrayRepeatPatternElementName)
+                if (keyPattern.TakeArg() == ExportParsingMachine.arrayRepeatPatternElementName &&
+                    valPattern.TakeArg() == ExportParsingMachine.arrayRepeatPatternElementName)
                 {
-                    readingContext.pattern.Add(elementCountPatternElementName);
-                    readingContext.pattern.Add(arrayRepeatPatternElementName);
+                    readingContext.pattern.Add(ExportParsingMachine.elementCountPatternElementName);
+                    readingContext.pattern.Add(ExportParsingMachine.arrayRepeatPatternElementName);
                     readingContext.pattern.AddRange(keyPattern);
-                    readingContext.pattern.Add(arrayRepeatEndPatternElementName);
+                    readingContext.pattern.Add(ExportParsingMachine.arrayRepeatEndPatternElementName);
 
-                    readingContext.pattern.Add(elementCountPatternElementName);
-                    readingContext.pattern.Add(arrayRepeatPatternElementName);
+                    readingContext.pattern.Add(ExportParsingMachine.elementCountPatternElementName);
+                    readingContext.pattern.Add(ExportParsingMachine.arrayRepeatPatternElementName);
                     readingContext.pattern.AddRange(keyPattern);
                     readingContext.pattern.AddRange(valPattern);
                 }

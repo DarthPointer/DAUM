@@ -31,10 +31,15 @@ namespace daum
 
                 { ExportParsingMachine.arrayElementTypeNameIndexPatternElementName, ArrayElementTypeNameIndexContextSearcher },
                 { ExportParsingMachine.structTypeNameIndexPatternElementName, StructTypeNameIndexContextSearcher },
+                { ExportParsingMachine.structPropertyArrayTypePatternElementName, StructPropertyArrayTypeContextSearcher },
+
+                { ExportParsingMachine.arrayRepeatPatternElementName, ArrayRepeatContextSearcher},
+                { ExportParsingMachine.elementCountPatternElementName, ElementCountContextSearcher },
 
                 { skipContextPatternElementName, SkipContextContextSearcher },
                 { ExportParsingMachine.skipPatternElementName, SkipContextSearcher },
                 { ExportParsingMachine.skipIfPatternEndsPatternElementName, SkipIfEndContextSearcher },
+                { ExportParsingMachine.skipIfPatternShorterThanPatternElemetnName, SkipIfPatternShorterThanContextSearcher },
 
                 { ExportParsingMachine.GUIDPatternElementName, ValueContextSearcher },
                 { ExportParsingMachine.float32PatternElementName, ValueContextSearcher }
@@ -241,6 +246,121 @@ namespace daum
             }
         }
 
+        private static void ArrayRepeatContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            bool thisArrayIsTarget = false;
+            Int32 targetIndex = -1;
+
+            if (readingContext.targetContext.Count > 2)
+            {
+                if (readingContext.targetContext[0] == "Array")
+                {
+                    Int32 skipsLeft = Int32.Parse(readingContext.targetContext[1]);
+                    if (skipsLeft == 0)
+                    {
+                        thisArrayIsTarget = true;
+
+                        readingContext.targetContext.TakeArg();
+                        readingContext.targetContext.TakeArg();
+
+                        targetIndex = Int32.Parse(readingContext.targetContext.TakeArg());
+                    }
+                    else
+                    {
+                        skipsLeft--;
+                        readingContext.targetContext[1] = skipsLeft.ToString();
+                    }
+                }
+            }
+
+            Int32 scaledElementSize;
+
+            // Some element types have no context-free size determination apart from assumed elements total size and count.
+            // Also ignore it if we have 0 elements because it is pointless and causes exception.
+            if (readingContext.pattern[0] == ExportParsingMachine.scaledArrayElementsPatternElementName &&
+                readingContext.collectionElementCount != 0)
+            {
+                readingContext.pattern.TakeArg();
+                scaledElementSize = (readingContext.declaredSizeStartOffset + readingContext.declaredSize -
+                    readingContext.currentUexpOffset) /
+                    (readingContext.collectionElementCount);
+            }
+            else
+            {
+                scaledElementSize = -1;
+            }
+
+            List<string> repeatedPattern = new List<string>();
+
+
+            // Passing all the stuff to repeat in cycle which is all past ArrayRepeat and til ArrayRepeatEnd or end of pattern
+            while (readingContext.pattern.Count > 0)
+            {
+                string element = readingContext.pattern.TakeArg();
+
+                if (element == ExportParsingMachine.arrayRepeatEndPatternElementName) break;
+
+                repeatedPattern.Add(element);
+            }
+
+            for (int i = 0; i < readingContext.collectionElementCount; i++)
+            {
+                if (customRunDara.reportSearchSteps) ExportParsingMachine.ReportExportContents($"Element {i}");
+
+                ExportParsingMachine.machineState.Push(new ReadingContext()
+                {
+                    currentUexpOffset = readingContext.currentUexpOffset,
+
+                    pattern = new List<string>(repeatedPattern),
+                    patternAlphabet = readingContext.patternAlphabet,
+
+                    targetContext = thisArrayIsTarget && (i == targetIndex) ? readingContext.targetContext : new List<string>(){ "Pattern Blocker" },
+
+                    structCategory = ReadingContext.StructCategory.nonExport,
+
+                    declaredSize = scaledElementSize
+                }); ;
+
+                ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
+            }
+        }
+
+        private static void ElementCountContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            readingContext.collectionElementCount = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
+            readingContext.contextCollectionElementCountOffset = readingContext.currentUexpOffset;
+
+            readingContext.currentUexpOffset += 4;
+        }
+
+        private static void StructPropertyArrayTypeContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            string typeName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 8;
+
+            if (customRunDara.reportSearchSteps) ExportParsingMachine.ReportExportContents($"Element structure type: {typeName}");
+
+            if (Program.PatternExists($"{Program.PatternFolders.structure}/{typeName}"))
+            {
+                readingContext.pattern.Add(ExportParsingMachine.arrayRepeatPatternElementName);
+                readingContext.pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.structure}/{typeName}"));
+            }
+            // Heuristics not allowed yet for replacement
+            //else if (Program.config.enablePatternReadingHeuristica && readingContext.collectionElementCount != 0)
+            //{
+            //    readingContext.pattern.Add(structTypeHeuristicaPatternElementName);
+            //    readingContext.pattern.Add(SkipIfPatternShorterThanPatternElemetnName);
+            //    readingContext.pattern.Add("2");
+            //    readingContext.pattern.Add(ExportParsingMachine.arrayRepeatPatternElementName);
+            //}
+        }
+
         private static void SkipContextContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             if (customRunDara.reportSearchSteps) ExportParsingMachine.ReportExportContents("Skipping context");
@@ -300,6 +420,20 @@ namespace daum
             if (readingContext.pattern.Count == 0)
             {
                 readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
+
+                ExportParsingMachine.ReportExportContents("Skipping structure due to lack of pattern");
+            }
+        }
+
+        private static void SkipIfPatternShorterThanContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            Int32 minimalCountToProceed = Int32.Parse(readingContext.pattern.TakeArg());
+            if (readingContext.pattern.Count < minimalCountToProceed)
+            {
+                readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
+                readingContext.pattern.Clear();
 
                 ExportParsingMachine.ReportExportContents("Skipping structure due to lack of pattern");
             }

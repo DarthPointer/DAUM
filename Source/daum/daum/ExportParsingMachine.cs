@@ -10,7 +10,11 @@ namespace daum
 
         public static Stack<ReadingContext> machineState;
 
+        public const string arrayRepeatPatternElementName = "ArrayRepeat";
+        public const string arrayRepeatEndPatternElementName = "ArrayRepeatEnd";
+        public const string elementCountPatternElementName = "ElementCount";
 
+        public const string scaledArrayElementsPatternElementName = "ScaledArrayElements";
 
         public const string endOfStructConfigName = "None";
 
@@ -18,12 +22,14 @@ namespace daum
 
         public const string skipPatternElementName = "Skip";
         public const string skipIfPatternEndsPatternElementName = "SkipIfPatternEnds";
+        public const string skipIfPatternShorterThanPatternElemetnName = "SkipIfPatternShorterThan";
 
         public const string sizeStartPatternElementName = "SizeStart";
         public const string sizePatternElementName = "Size";
 
         public const string arrayElementTypeNameIndexPatternElementName = "ArrayElementTypeNameIndex";
         public const string structTypeNameIndexPatternElementName = "StructTypeNameIndex";
+        public const string structPropertyArrayTypePatternElementName = "StructPropertyArrayType";
 
         public const string float32PatternElementName = "Float32";
         public const string GUIDPatternElementName = "GUID";
