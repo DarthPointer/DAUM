@@ -35,6 +35,8 @@ namespace daum
         public const string GUIDPatternElementName = "GUID";
         public const string SPNTPatternElementName = "SPNTS";
 
+        public const string TPDHPatternElementName = "TextPropertyDirtyHack";
+
 
 
         private static int currentStructLevel = 0;

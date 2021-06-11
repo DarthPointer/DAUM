@@ -45,7 +45,9 @@ namespace daum
                 { ExportParsingMachine.GUIDPatternElementName, ValueContextSearcher },
                 { ExportParsingMachine.float32PatternElementName, ValueContextSearcher },
 
-                { ExportParsingMachine.SPNTPatternElementName, ValueContextSearcher }
+                { ExportParsingMachine.SPNTPatternElementName, ValueContextSearcher },
+
+                { ExportParsingMachine.TPDHPatternElementName, TextPropertyDirtyHackContextSearcher }
             };
 
         private static Dictionary<string, PrimitiveTypeData> primitiveTypes = new Dictionary<string, PrimitiveTypeData>()
@@ -468,6 +470,41 @@ namespace daum
 
             primitiveType.skip(ref readingContext.currentUexpOffset);
             if (customRunDara.reportSearchSteps) ExportParsingMachine.ReportExportContents($"Skipping {primitiveTypeName} value");
+        }
+
+        private static void TextPropertyDirtyHackContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            /* TextProperty pattern has to be `Size 0 Skip 1 SizeStart TPDH`
+             * Tgt context should be TextProperty/0/X/Type/0
+             * Pattern gets `Skip X Type`.
+            */
+            readingContext.pattern.TakeArg();
+
+            if (readingContext.targetContext.Count > 0)
+            {
+                if (readingContext.targetContext[0] == "TextProperty")
+                {
+                    Int32 skipsLeft = Int32.Parse(readingContext.targetContext[1]);
+
+                    if (skipsLeft == 0)
+                    {
+                        if (customRunDara.reportSearchSteps)
+                        {
+                            ExportParsingMachine.ReportExportContents($"Applying offset bruteforce for TextProperty at {readingContext.currentUexpOffset}");
+
+                            readingContext.targetContext.TakeArg();
+                            readingContext.targetContext.TakeArg();
+
+                            // Proceed to needed offset
+                            readingContext.pattern.Add(ExportParsingMachine.skipPatternElementName);
+                            readingContext.pattern.Add(readingContext.targetContext.TakeArg());
+
+                            // Value is there
+                            readingContext.pattern.Add(readingContext.targetContext[0]);
+                        }
+                    }
+                }
+            }
         }
 
         private static void SkipIfEndContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)

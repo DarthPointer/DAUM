@@ -50,7 +50,7 @@ namespace daum
 
             { "MapGeneratorTypes", MapGeneratorTypesPatternElementProcesser },
 
-            { "TextPropertyDirtyHack", TextPropertyDirtyHackPatternElementProcesser },
+            { ExportParsingMachine.TPDHPatternElementName, TextPropertyDirtyHackPatternElementProcesser },
 
             { ExportParsingMachine.NTPLPatternElementName, NoneTerminatedPropListPatternElementProcesser }
         };
