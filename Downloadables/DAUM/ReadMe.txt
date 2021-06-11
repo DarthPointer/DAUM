@@ -15,14 +15,17 @@ Interactive mode:
 Single command mode:
 1) Launch with first argument being the .uasset's filepath and following arguments being command to execute.
 
-5head mode:
-1) Make a .bat calling DAUM with one command to execute each time combined with calling OffSetter to make most of your
-changes done automatically. See example exe.bat. It is to be put to your M1K WPN files and launched to swap T1.Damage
-and T5.FastReload mods.
+Script execution mode:
+1) Make a text file containing DAUM commands and launch `...daum.exe -s [scirpt file]` or open a with ExecuteScript.bat.
+	Drag'n'drop into the bat/`...bat [script file]`/set the bat to be default program to open an extension you choose for DAUM scripts and open it.
 
-Edited file is saved under name of the original one. .offset and .daum and otherfiles are backups created after each command changing anything.
+	Script mode loads DAUM with no file chosen so the script should start with -f [uasset file] before any other ops working with ue files.
+	PreloadPatterns in the beginning of scripts is strongly recommended for performance reasons.
 
-Commands:
+## Commands
+
+Edited file is saved under name of the original one. .offset and .daum and other files are backups created after each command changing anything.
+
 Uasset map commands are: [block] [operation] [operation params]
 
 Block: -i for Import Map, -n for Name Map, -edef for export map.
@@ -79,6 +82,37 @@ flags, so these are imports' ObjectName strings.
 [-e Default__STE_Revolver_Neurotoxin_C 0] is another import/export, this time it is an export. Remember export name must
 have augmentation after it!
 
+Uexp editing:
+
+-echange operation.
+
+-echange -r: overwrites values. Format: -echange -r [export] [path] [new_value]
+	Export is either
+		name string + aug integer
+		OR
+		-i export object index
+	Path is a set of '/'-separated names and indices, corelates with relevant pattern contents.
+	New value is a string for new value. TO DO: describe tricky and non-conventional input formats.
+
+	Path elements:
+		If you need to get inside a property with name X, then use its name.
+		If you need to change privitive type value, use TypeValuePattern/X, where X is the "index" of relevant type entry for current "context".
+		If you need to get into array, use Array/X, X is the "index" of relevant array entry. X is 0 in most cases which are plain ArrayProperty.
+		Use index to specify array element. Array/0/0 means 1st element of 1st array (see above).
+	Path Example: 
+		ExternalStruct/ArrayPropName/Array/0/0/ElementStructPropName/Float32/0
+		This points us into a struct property with name "ExternalStruct", its "ArrayPropName" ArrayProperty, 1st element, "ElementStructPropName"
+		property inside the element, to the first Float32 we see.
+	
+	SPECIAL CASE: Due to TextProperty being weird shit and having to direct support, you need to use a special path scheme to change its contents.
+		The way to the property itself is regular. But then you have to define type and relative offset of its contents to change in path.
+		...[path to text property]/TextProperty/I/X/Type/0.
+		I is index of TP body to change, for plain TextProperty it is 0.
+		X is relative offset from body start to data you change.
+		Type is name of pattern element for your data.
+		0 does not make much sense here but is not omitted in order for the used workaround to work.
+	
+
 Parser Funcionality:
 
 -eread [export]
@@ -101,3 +135,12 @@ parse: Call DRG Parser to parse current file (if its path is configged, exceptio
 -o: Passes current file name to OffSetter with all the arguments you add further.
 
 exit: Exit.
+
+## Config
+	offsetterPath: Absolute path of OffSetter.exe, pay attention to doubled '//'.
+	drgParserPath: Absolute path of DRG Parser's exe, pay attention to doubled '//'.
+	
+	autoParseAfterSuccess: If true, DRG Parser is called to reparse files in case of a successful run of a command that changes the files.
+
+	enablePatternReadingHeuristica: If true, heuristic assumptions will be applied in case of pattern lack. Powerful, yet has a minimal chance of causing 
+		exceptions.

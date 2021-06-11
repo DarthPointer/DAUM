@@ -14,10 +14,12 @@ namespace daum
     {
         private static string configPath;
 
-        private static string exitCommand = "exit";
-        private static string printNullConfigCommand = "nullConfig";
-        private static string parseCommand = "parse";
-        private static string fromScriptModeKey = "-s";
+        private const string exitCommand = "exit";
+        private const string printNullConfigCommand = "nullConfig";
+        private const string parseCommand = "parse";
+        private const string fromScriptModeKey = "-s";
+        private const string startRecordingCommand = "StartRec";
+        private const string stopRecordingCommand = "StopRec";
 
         private static Dictionary<string, Operation> operations = new Dictionary<string, Operation>() {
             { "-n", new NameDefOperation() },
@@ -25,6 +27,7 @@ namespace daum
             { "-edef", new ExportDefOperation() },
 
             { "-eread", new ExportReadOperation() },
+            { "-echange", new ExportChangeOperation() },
 
             { "-f", new LoadFileOperation() },
 
@@ -101,7 +104,11 @@ namespace daum
                 {
                     try
                     {
-                        List<string> command = ParseCommandString(Console.ReadLine());
+                        string input = Console.ReadLine();
+
+                        if (runData.recordCommands && input != stopRecordingCommand) runData.commandsRecordingFile.WriteLine(input);
+
+                        List<string> command = ParseCommandString(input);
                         if (command[0].Length > 0)
                         {
                             runLoop = ProcessCommand(config, runData, command, out bool doneSomething, out bool parsed);
@@ -179,6 +186,42 @@ namespace daum
                         return true;
                     }
 
+
+                    if (command[0] == startRecordingCommand)
+                    {
+                        if (!runData.recordCommands)
+                        {
+                            command.TakeArg();
+                            runData.commandsRecordingFileName = command.TakeArg();
+
+                            runData.recordCommands = true;
+
+                            if (File.Exists(runData.commandsRecordingFileName)) File.Delete(runData.commandsRecordingFileName);
+
+                            File.WriteAllText(runData.commandsRecordingFileName, "");
+                            runData.commandsRecordingFile = File.AppendText(runData.commandsRecordingFileName);
+
+                            if (runData.uassetFileName != "")
+                            {
+                                runData.commandsRecordingFile.WriteLine($"-f {runData.uassetFileName}");
+                            }
+                        }
+
+                        doneSomething = false;
+                        return true;
+                    }
+
+                    if (command[0] == stopRecordingCommand)
+                    {
+                        runData.recordCommands = false;
+                        runData.commandsRecordingFile.Close();
+                        runData.commandsRecordingFile = null;
+                        runData.commandsRecordingFileName = "";
+
+                        doneSomething = false;
+                        return true;
+                    }
+
                     string operationKey = command.TakeArg();
 
                     if (operations.ContainsKey(operationKey))
@@ -190,6 +233,10 @@ namespace daum
                             if (File.Exists(runData.uassetFileName + ".daum")) File.Delete(runData.uassetFileName + ".daum");
                             Directory.Move(runData.uassetFileName, runData.uassetFileName + ".daum");
                             File.WriteAllBytes(runData.uassetFileName, Program.runData.uasset);
+
+                            if (File.Exists(runData.uexpFileName + ".daum")) File.Delete(runData.uexpFileName + ".daum");
+                            Directory.Move(runData.uexpFileName, runData.uexpFileName + ".daum");
+                            File.WriteAllBytes(runData.uexpFileName, Program.runData.uexp);
                         }
 
                         if (offSetterCallArgs != "")
@@ -415,6 +462,10 @@ namespace daum
 
             public bool patternsArePreloaded = false;
             public Dictionary<string, List<string>> preloadedPatterns = new Dictionary<string, List<string>>();
+
+            public bool recordCommands = false;
+            public string commandsRecordingFileName = "";
+            public StreamWriter commandsRecordingFile = null;
         }
 
         [JsonObject]
@@ -423,6 +474,8 @@ namespace daum
             public string offsetterPath = "";
             public string drgParserPath = "";
             public bool autoParseAfterSuccess = false;
+
+            public bool enablePatternReadingHeuristica = false;
         }
 
         public record ImportData
