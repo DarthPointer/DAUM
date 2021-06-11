@@ -321,7 +321,7 @@ namespace daum
                     structCategory = ReadingContext.StructCategory.nonExport,
 
                     declaredSize = scaledElementSize
-                }); ;
+                });
 
                 ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
             }
