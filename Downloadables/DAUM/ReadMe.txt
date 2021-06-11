@@ -104,6 +104,14 @@ Uexp editing:
 		This points us into a struct property with name "ExternalStruct", its "ArrayPropName" ArrayProperty, 1st element, "ElementStructPropName"
 		property inside the element, to the first Float32 we see.
 	
+	SPECIAL CASE: Due to TextProperty being weird shit and having to direct support, you need to use a special path scheme to change its contents.
+		The way to the property itself is regular. But then you have to define type and relative offset of its contents to change in path.
+		...[path to text property]/TextProperty/I/X/Type/0.
+		I is index of TP body to change, for plain TextProperty it is 0.
+		X is relative offset from body start to data you change.
+		Type is name of pattern element for your data.
+		0 does not make much sense here but is not omitted in order for the used workaround to work.
+	
 
 Parser Funcionality:
 
