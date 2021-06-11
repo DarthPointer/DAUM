@@ -11,12 +11,13 @@ namespace daum
     {
         private static ECOCustomRunDara customRunDara;
 
-        readonly static Dictionary<string, Action<List<string>>> replaceModeAdditionalKeys = new Dictionary<string, Action<List<string>>>()
+        private readonly static Dictionary<string, Action<List<string>>> replaceModeAdditionalKeys = new Dictionary<string, Action<List<string>>>()
         {
-            { "-r", (args) => customRunDara.reportSearchSteps = true }
+            { "-r", (args) => customRunDara.reportSearchSteps = true },
+            { "-utf16", (args) => customRunDara.newStringValEncoding = ECOCustomRunDara.NewStringValEncoding.utf16 }
         };
 
-        private static Dictionary<string, Func<List<string>, string>> modes = new Dictionary<string, Func<List<string>, string>>()
+        private readonly static Dictionary<string, Func<List<string>, string>> modes = new Dictionary<string, Func<List<string>, string>>()
         {
             { "-r", ReplaceMode }
         };
@@ -42,7 +43,9 @@ namespace daum
                 { ExportParsingMachine.skipIfPatternShorterThanPatternElemetnName, SkipIfPatternShorterThanContextSearcher },
 
                 { ExportParsingMachine.GUIDPatternElementName, ValueContextSearcher },
-                { ExportParsingMachine.float32PatternElementName, ValueContextSearcher }
+                { ExportParsingMachine.float32PatternElementName, ValueContextSearcher },
+
+                { ExportParsingMachine.SPNTPatternElementName, ValueContextSearcher }
             };
 
         private static Dictionary<string, PrimitiveTypeData> primitiveTypes = new Dictionary<string, PrimitiveTypeData>()
@@ -52,6 +55,7 @@ namespace daum
                 writer = WriteGUID,
                 ConstantSize = 16
             } },
+
             { ExportParsingMachine.float32PatternElementName, new PrimitiveTypeData()
             {
                 reader = (ref Int32 offset) =>
@@ -63,6 +67,48 @@ namespace daum
                     BitConverter.GetBytes(float.Parse(value)).CopyTo(Program.runData.uexp, offset); offset +=4;
                 },
                 ConstantSize = 4
+            } },
+
+            { ExportParsingMachine.SPNTPatternElementName, new PrimitiveTypeData()
+            {
+                reader = (ref Int32 offset) =>
+                {
+                    return Program.SizePrefixedStringFromOffsetOffsetAdvance(Program.runData.uexp, ref offset);
+                },
+                writer = (ref Int32 offset, string value) =>
+                {
+                    Int32 initialStringSize = BitConverter.ToInt32(Program.runData.uexp, offset);
+                    Int32 newStringSize;
+
+                    Program.runData.uexp = Remove(Program.runData.uexp, offset+4, initialStringSize < 0 ? initialStringSize*-2 : initialStringSize);
+
+                    byte[] insert;
+                    if (customRunDara.newStringValEncoding == ECOCustomRunDara.NewStringValEncoding.utf8)
+                    {
+                        insert = Encoding.UTF8.GetBytes(value);
+                        insert = Insert(insert, new byte[]{0}, insert.Length);
+                        newStringSize = insert.Length;
+                        DOLib.WriteInt32IntoOffset(Program.runData.uexp, newStringSize, offset);
+                    }
+                    else //if (customRunDara.newStringValEncoding == ECOCustomRunDara.NewStringValEncoding.utf16)
+                    {
+                        insert = Encoding.Unicode.GetBytes(value);
+                        insert = Insert(insert, new byte[]{0, 0}, insert.Length);
+                        newStringSize = insert.Length;
+                        DOLib.WriteInt32IntoOffset(Program.runData.uexp, newStringSize/-2, offset);
+                    }
+
+                    Program.runData.uexp = Insert(Program.runData.uexp, insert, offset + 4);
+                    customRunDara.sizeChange = newStringSize - initialStringSize;
+                    ExportParsingMachine.machineState.Peek().sizeChange = customRunDara.sizeChange;
+
+                    offset += 4 + newStringSize;
+                },
+                skip = (ref Int32 offset) =>
+                {
+                    Int32 count = BitConverter.ToInt32(Program.runData.uexp, offset);
+                    offset += count > 0 ? count : -2 * count;
+                }
             } }
         };
 
@@ -88,6 +134,9 @@ namespace daum
 
             Int32 exportIndex = GetExportIndex(uasset, args).Value;
             Int32 exportDefOffset = BitConverter.ToInt32(uasset, exportOffsetOffset) + (exportIndex - 1) * exportDefSize;
+
+            customRunDara.changedExportSerialOffset = BitConverter.ToInt32(uasset, exportDefOffset + exportSerialOffsetOffset);
+
             Int32 exportOffset = BitConverter.ToInt32(uasset, exportDefOffset + exportSerialOffsetOffset) -
                 BitConverter.ToInt32(uasset, headerSizeOffset);
             Int32 exportSize = BitConverter.ToInt32(uasset, exportDefOffset + exportSerialSizeOffset);
@@ -118,12 +167,14 @@ namespace daum
 
                 targetContext = new List<string>(targetContext.Split('/')),
 
-                structCategory = ReadingContext.StructCategory.export
+                structCategory = ReadingContext.StructCategory.export,
+
+                contextReturnProcesser = ContextReturnProcesser
             });
 
             ExportParsingMachine.StepsTilEndOfStruct(Program.runData.uasset, Program.runData.uexp);
 
-            return "";
+            return $" -e {customRunDara.sizeChange} {customRunDara.changedExportSerialOffset}";
         }
 
         private static void NTPLContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -188,7 +239,9 @@ namespace daum
                 pattern = propertyPattern,
                 patternAlphabet = readingContext.patternAlphabet,
 
-                structCategory = ReadingContext.StructCategory.nonExport
+                structCategory = ReadingContext.StructCategory.nonExport,
+
+                contextReturnProcesser = ContextReturnProcesser
             });
 
             ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
@@ -320,7 +373,9 @@ namespace daum
 
                     structCategory = ReadingContext.StructCategory.nonExport,
 
-                    declaredSize = scaledElementSize
+                    declaredSize = scaledElementSize,
+
+                    contextReturnProcesser = ContextReturnProcesser
                 });
 
                 ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
@@ -399,6 +454,8 @@ namespace daum
                         readingContext.targetContext.Clear();
 
                         primitiveType.writer(ref readingContext.currentUexpOffset, customRunDara.newValue);
+
+                        customRunDara.taskComplete = true;
                         return;
                     }
                     else
@@ -441,6 +498,23 @@ namespace daum
 
 
 
+        private static void ContextReturnProcesser(ReadingContext upperContext, ReadingContext finishedContext)
+        {
+            upperContext.sizeChange += finishedContext.sizeChange;
+            if (finishedContext.contextDeclaredSizeOffset != 0)
+            {
+                DOLib.AddToInt32ByOffset(Program.runData.uexp, finishedContext.sizeChange, finishedContext.contextDeclaredSizeOffset);
+            }
+
+            if (customRunDara.taskComplete)
+            {
+                upperContext.targetContext.Clear();
+                upperContext.pattern.Clear();
+            }
+        }
+
+
+
         private static void WriteGUID(ref Int32 offset, string value)
         {
             byte[] newVal = Guid.Parse(value).ToByteArray();
@@ -455,6 +529,19 @@ namespace daum
         {
             public bool reportSearchSteps = false;
             public string newValue = "";
+
+            public bool taskComplete = false;
+
+            public Int32 changedExportSerialOffset = 0;
+            public Int32 sizeChange = 0;
+
+            public NewStringValEncoding newStringValEncoding = NewStringValEncoding.utf8;
+
+            public enum NewStringValEncoding
+            {
+                utf8,
+                utf16
+            }
         }
 
         private class PrimitiveTypeData

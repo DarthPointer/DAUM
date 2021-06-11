@@ -33,7 +33,7 @@ namespace daum
             { "ByteProp", BytePropPatternElementProcesser },
             { ExportParsingMachine.float32PatternElementName, FloatPatternElementProcesser },
             { ExportParsingMachine.GUIDPatternElementName, GUIDPatternElementProcesser },
-            { "SPNTS", SizePrefixedNullTermStringPatternElementProcesser },
+            { ExportParsingMachine.SPNTPatternElementName, SizePrefixedNullTermStringPatternElementProcesser },
 
             { "Bool", BoolPatternElementProcesser },
 

@@ -33,6 +33,7 @@ namespace daum
 
         public const string float32PatternElementName = "Float32";
         public const string GUIDPatternElementName = "GUID";
+        public const string SPNTPatternElementName = "SPNTS";
 
 
 
@@ -78,7 +79,10 @@ namespace daum
 
             DecStructLevel();
 
-            readingContext.currentUexpOffset = machineState.Pop().currentUexpOffset;
+            ReadingContext finishedContext = machineState.Pop();
+            readingContext.currentUexpOffset = finishedContext.currentUexpOffset;
+
+            if (finishedContext.contextReturnProcesser != null) finishedContext.contextReturnProcesser(readingContext, finishedContext);
         }
 
 
@@ -153,12 +157,16 @@ namespace daum
 
     class ReadingContext
     {
+        public delegate void ContextReturnProcesser(ReadingContext upperContext, ReadingContext finishedContext);
+
         public Int32 currentUexpOffset;
         public Int32 declaredSize;
         public Int32 declaredSizeStartOffset;
         public Int32 collectionElementCount;
 
-        public Int32 contextDeclaredSizeOffset;
+        public Int32 sizeChange = 0;
+
+        public Int32 contextDeclaredSizeOffset = 0;
         public Int32 contextCollectionElementCountOffset;
 
         public List<string> pattern;
@@ -167,6 +175,8 @@ namespace daum
         public StructCategory structCategory;
 
         public Dictionary<string, ExportParsingMachine.PatternElementProcesser> patternAlphabet;
+
+        public ContextReturnProcesser contextReturnProcesser = null;
 
         public enum StructCategory
         {
