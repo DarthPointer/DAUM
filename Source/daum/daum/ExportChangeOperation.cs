@@ -14,7 +14,8 @@ namespace daum
         private readonly static Dictionary<string, Action<List<string>>> replaceModeAdditionalKeys = new Dictionary<string, Action<List<string>>>()
         {
             { "-r", (args) => customRunDara.reportSearchSteps = true },
-            { "-utf16", (args) => customRunDara.newStringValEncoding = ECOCustomRunDara.NewStringValEncoding.utf16 }
+            { "-utf16", (args) => customRunDara.newStringValEncoding = ECOCustomRunDara.NewStringValEncoding.utf16 },
+            { "-nullstr", (args) => customRunDara.nullString = true }
         };
 
         private readonly static Dictionary<string, Func<List<string>, string>> modes = new Dictionary<string, Func<List<string>, string>>()
@@ -91,7 +92,13 @@ namespace daum
                     Program.runData.uexp = Remove(Program.runData.uexp, offset+4, initialStringSize < 0 ? initialStringSize*-2 : initialStringSize);
 
                     byte[] insert;
-                    if (customRunDara.newStringValEncoding == ECOCustomRunDara.NewStringValEncoding.utf8)
+                    if (customRunDara.nullString)
+                    {
+                        insert = new byte[0];
+                        newStringSize = 0;
+                        DOLib.WriteInt32IntoOffset(Program.runData.uexp, newStringSize, offset);
+                    }
+                    else if (customRunDara.newStringValEncoding == ECOCustomRunDara.NewStringValEncoding.utf8)
                     {
                         insert = Encoding.UTF8.GetBytes(value);
                         insert = Insert(insert, new byte[]{0}, insert.Length);
@@ -586,17 +593,17 @@ namespace daum
                         if (customRunDara.reportSearchSteps)
                         {
                             ExportParsingMachine.ReportExportContents($"Applying offset bruteforce for TextProperty at {readingContext.currentUexpOffset}");
-
-                            readingContext.targetContext.TakeArg();
-                            readingContext.targetContext.TakeArg();
-
-                            // Proceed to needed offset
-                            readingContext.pattern.Add(ExportParsingMachine.skipPatternElementName);
-                            readingContext.pattern.Add(readingContext.targetContext.TakeArg());
-
-                            // Value is there
-                            readingContext.pattern.Add(readingContext.targetContext[0]);
                         }
+
+                        readingContext.targetContext.TakeArg();
+                        readingContext.targetContext.TakeArg();
+
+                        // Proceed to needed offset
+                        readingContext.pattern.Add(ExportParsingMachine.skipPatternElementName);
+                        readingContext.pattern.Add(readingContext.targetContext.TakeArg());
+
+                        // Value is there
+                        readingContext.pattern.Add(readingContext.targetContext[0]);
                     }
                 }
             }
@@ -668,6 +675,7 @@ namespace daum
             public Int32 sizeChange = 0;
 
             public NewStringValEncoding newStringValEncoding = NewStringValEncoding.utf8;
+            public bool nullString = false;
 
             public enum NewStringValEncoding
             {

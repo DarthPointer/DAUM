@@ -304,9 +304,11 @@ namespace daum
             string buffer = "";
             bool isEscSeq = false;
             bool insideSpacedArgBrackets = false;
+            char lastChar = (char)0;
 
             foreach (char c in command)
             {
+                lastChar = c;
                 if (!isEscSeq)
                 {
                     switch (c)
@@ -367,7 +369,7 @@ namespace daum
                 }
             }
 
-            result.Add(buffer);
+            if (lastChar != '"' && lastChar != ' ' && lastChar != 0) result.Add(buffer);
 
             return result;
         }
