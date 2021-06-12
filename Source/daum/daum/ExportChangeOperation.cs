@@ -44,8 +44,14 @@ namespace daum
 
                 { ExportParsingMachine.GUIDPatternElementName, ValueContextSearcher },
                 { ExportParsingMachine.float32PatternElementName, ValueContextSearcher },
-
                 { ExportParsingMachine.SPNTPatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.BoolPatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.NamePatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.ObjectIndexPatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.Uint16PatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.Int32PatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.Uint32PatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.Uint64PatternElementName, ValueContextSearcher },
 
                 { ExportParsingMachine.TPDHPatternElementName, TextPropertyDirtyHackContextSearcher }
             };
@@ -53,7 +59,7 @@ namespace daum
         private static Dictionary<string, PrimitiveTypeData> primitiveTypes = new Dictionary<string, PrimitiveTypeData>()
         {
             { ExportParsingMachine.GUIDPatternElementName, new PrimitiveTypeData() {
-                reader = ExportParsingMachine.GUIDFromOffsetToString,
+                reader = ExportParsingMachine.GUIDFromUexpOffsetToString,
                 writer = WriteGUID,
                 ConstantSize = 16
             } },
@@ -111,6 +117,95 @@ namespace daum
                     Int32 count = BitConverter.ToInt32(Program.runData.uexp, offset);
                     offset += count > 0 ? count : -2 * count;
                 }
+            } },
+            { ExportParsingMachine.BoolPatternElementName, new PrimitiveTypeData()
+            {
+                reader = (ref Int32 offset) =>
+                {
+                    string result = BitConverter.ToBoolean(Program.runData.uexp, offset).ToString(); offset++; return result;
+                },
+                writer = (ref Int32 offset, string value) =>
+                {
+                    BitConverter.GetBytes(bool.Parse(value)).CopyTo(Program.runData.uexp, offset); offset++;
+                },
+                ConstantSize = 1
+            } },
+            { ExportParsingMachine.Uint16PatternElementName, new PrimitiveTypeData()
+            {
+                reader = (ref Int32 offset) =>
+                {
+                    string result = BitConverter.ToUInt16(Program.runData.uexp, offset).ToString(); offset += 2; return result;
+                },
+                writer = (ref Int32 offset, string value) =>
+                {
+                    BitConverter.GetBytes(UInt16.Parse(value)).CopyTo(Program.runData.uexp, offset); offset += 2;
+                },
+                ConstantSize = 2
+            } },
+            { ExportParsingMachine.Int32PatternElementName, new PrimitiveTypeData()
+            {
+                reader = (ref Int32 offset) =>
+                {
+                    string result = BitConverter.ToInt32(Program.runData.uexp, offset).ToString(); offset += 4; return result;
+                },
+                writer = (ref Int32 offset, string value) =>
+                {
+                    BitConverter.GetBytes(Int32.Parse(value)).CopyTo(Program.runData.uexp, offset); offset += 4;
+                },
+                ConstantSize = 4
+            } },
+            { ExportParsingMachine.Uint32PatternElementName, new PrimitiveTypeData()
+            {
+                reader = (ref Int32 offset) =>
+                {
+                    string result = BitConverter.ToUInt32(Program.runData.uexp, offset).ToString(); offset += 4; return result;
+                },
+                writer = (ref Int32 offset, string value) =>
+                {
+                    BitConverter.GetBytes(UInt32.Parse(value)).CopyTo(Program.runData.uexp, offset); offset += 4;
+                },
+                ConstantSize = 4
+            } },
+            { ExportParsingMachine.Uint64PatternElementName, new PrimitiveTypeData()
+            {
+                reader = (ref Int32 offset) =>
+                {
+                    string result = BitConverter.ToUInt64(Program.runData.uexp, offset).ToString(); offset += 8; return result;
+                },
+                writer = (ref Int32 offset, string value) =>
+                {
+                    BitConverter.GetBytes(UInt64.Parse(value)).CopyTo(Program.runData.uexp, offset); offset += 8;
+                },
+                ConstantSize = 8
+            } },
+            { ExportParsingMachine.NamePatternElementName, new PrimitiveTypeData()
+            {
+                reader = (ref Int32 offset) =>
+                {
+                    string result = ExportParsingMachine.FullNameString(Program.runData.uexp, offset); offset += 8; return result;
+                },
+                writer = (ref Int32 offset, string value) =>
+                {
+                    List<string> args = Program.ParseCommandString(value);
+                    Int32 nameIndex = GetNameIndex(Program.runData.uasset, args).Value;
+                    Int32 nameAug = Int32.Parse(args.TakeArg());
+                    BitConverter.GetBytes(nameIndex).CopyTo(Program.runData.uexp, offset); offset += 4;
+                    BitConverter.GetBytes(nameAug).CopyTo(Program.runData.uexp, offset); offset += 4;
+                },
+                ConstantSize = 8
+            } },
+            { ExportParsingMachine.ObjectIndexPatternElementName, new PrimitiveTypeData()
+            {
+                reader = (ref Int32 offset) =>
+                {
+                    string result = ExportParsingMachine.FullNameString(Program.runData.uexp, offset); offset += 4; return result;
+                },
+                writer = (ref Int32 offset, string value) =>
+                {
+                    Int32 objectIndex = GetImportExportIndex(Program.runData.uasset, Program.ParseCommandString(value)).Value;
+                    BitConverter.GetBytes(objectIndex).CopyTo(Program.runData.uexp, offset); offset += 4;
+                },
+                ConstantSize = 4
             } }
         };
 
@@ -135,13 +230,13 @@ namespace daum
             byte[] uexp = Program.runData.uexp;
 
             Int32 exportIndex = GetExportIndex(uasset, args).Value;
-            Int32 exportDefOffset = BitConverter.ToInt32(uasset, exportOffsetOffset) + (exportIndex - 1) * exportDefSize;
+            Int32 exportDefOffset = BitConverter.ToInt32(uasset, OffsetConstants.exportOffsetOffset) + (exportIndex - 1) * OffsetConstants.exportDefSize;
 
-            customRunDara.changedExportSerialOffset = BitConverter.ToInt32(uasset, exportDefOffset + exportSerialOffsetOffset);
+            customRunDara.changedExportSerialOffset = BitConverter.ToInt32(uasset, exportDefOffset + OffsetConstants.exportSerialOffsetOffset);
 
-            Int32 exportOffset = BitConverter.ToInt32(uasset, exportDefOffset + exportSerialOffsetOffset) -
+            Int32 exportOffset = BitConverter.ToInt32(uasset, exportDefOffset + OffsetConstants.exportSerialOffsetOffset) -
                 BitConverter.ToInt32(uasset, headerSizeOffset);
-            Int32 exportSize = BitConverter.ToInt32(uasset, exportDefOffset + exportSerialSizeOffset);
+            Int32 exportSize = BitConverter.ToInt32(uasset, exportDefOffset + OffsetConstants.exportSerialSizeOffset);
 
             string targetContext = args.TakeArg();
             customRunDara.newValue = args.TakeArg();

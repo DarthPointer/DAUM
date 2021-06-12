@@ -22,5 +22,16 @@ namespace daum
         public const Int32 importClassOffset = 8;
         public const Int32 importOuterIndexOffset = 16;
         public const Int32 importDefSize = 28;
+
+        // ----------------------------------------- 
+        // ExportMap
+        public const Int32 exportOffsetOffset = 61;
+        public const Int32 exportCountOffset = 57;
+
+        public const Int32 exportNameOffset = 16;
+        public const Int32 exportDefSize = 104;
+
+        public const Int32 exportSerialOffsetOffset = 36;
+        public const Int32 exportSerialSizeOffset = 28;
     }
 }

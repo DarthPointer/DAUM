@@ -23,22 +23,22 @@ namespace daum
             { ExportParsingMachine.skipIfPatternEndsPatternElementName, SkipIfEndPatternElementProcesser },
             { ExportParsingMachine.skipIfPatternShorterThanPatternElemetnName, SkipIfPatternShorterThanPatternElementProcesser },
 
-            { "UInt16", UInt16PatternElementProcesser },
+            { ExportParsingMachine.Uint16PatternElementName, UInt16PatternElementProcesser },
 
-            { "Int32", IntPatternElementProcesser },
-            { "UInt32", UIntPatternElementProcesser },
+            { ExportParsingMachine.Int32PatternElementName, IntPatternElementProcesser },
+            { ExportParsingMachine.Uint32PatternElementName, UIntPatternElementProcesser },
 
-            { "UInt64", UInt64PatternElementProcesser },
+            { ExportParsingMachine.Uint64PatternElementName, UInt64PatternElementProcesser },
 
             { "ByteProp", BytePropPatternElementProcesser },
             { ExportParsingMachine.float32PatternElementName, FloatPatternElementProcesser },
             { ExportParsingMachine.GUIDPatternElementName, GUIDPatternElementProcesser },
             { ExportParsingMachine.SPNTPatternElementName, SizePrefixedNullTermStringPatternElementProcesser },
 
-            { "Bool", BoolPatternElementProcesser },
+            { ExportParsingMachine.BoolPatternElementName, BoolPatternElementProcesser },
 
-            { "ObjectIndex", ObjectIndexPatternElementProcesser },
-            { "Name", NamePatternElementProcesser },
+            { ExportParsingMachine.ObjectIndexPatternElementName, ObjectIndexPatternElementProcesser },
+            { ExportParsingMachine.NamePatternElementName, NamePatternElementProcesser },
 
             { ExportParsingMachine.structTypeNameIndexPatternElementName, StructTypeNameIndexPatternElementProcesser },
             { structTypeHeuristicaPatternElementName, StructTypeHeurisitcaPatternElementProcesser },
@@ -62,11 +62,16 @@ namespace daum
 
             Int32 exportIndex = GetExportIndex(Program.runData.uasset, args).Value;
 
-            Int32 fisrtExportOffset = BitConverter.ToInt32(Program.runData.uasset, exportOffsetOffset);
-            Int32 uexpStructureOffset = BitConverter.ToInt32(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportSerialOffsetOffset)
+            Int32 fisrtExportOffset = BitConverter.ToInt32(Program.runData.uasset, OffsetConstants.exportOffsetOffset);
+            Int32 uexpStructureOffset = BitConverter.ToInt32(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1)
+                * OffsetConstants.exportDefSize + OffsetConstants.exportSerialOffsetOffset)
                 - BitConverter.ToInt32(Program.runData.uasset, headerSizeOffset);
-            Int32 uexpStructureSize = BitConverter.ToInt32(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportSerialSizeOffset);
-            string exportObjectName = ExportParsingMachine.FullNameString(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) * exportDefSize + exportNameOffset);
+
+            Int32 uexpStructureSize = BitConverter.ToInt32(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) *
+                OffsetConstants.exportDefSize + OffsetConstants.exportSerialSizeOffset);
+
+            string exportObjectName = ExportParsingMachine.FullNameString(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) *
+                OffsetConstants.exportDefSize + OffsetConstants.exportNameOffset);
 
             Console.WriteLine("--------------------");
             Console.WriteLine($"Export Index: {exportIndex}");
@@ -177,7 +182,7 @@ namespace daum
         private static void GUIDPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
-            ExportParsingMachine.ReportExportContents(ExportParsingMachine.GUIDFromOffsetToString(ref readingContext.currentUexpOffset));
+            ExportParsingMachine.ReportExportContents(ExportParsingMachine.GUIDFromUexpOffsetToString(ref readingContext.currentUexpOffset));
         }
 
         private static void SizePrefixedNullTermStringPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -443,25 +448,7 @@ namespace daum
         private static void ObjectIndexPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
-
-            Int32 index = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
-
-            readingContext.currentUexpOffset += 4;
-
-            string valueStr;
-
-            if (index == 0)
-            {
-                valueStr = "null";
-            }
-            else if (index < 0)
-            {
-                valueStr = $"Import:{ImportByIndexFullNameString(uasset, uexp, index)}";
-            }
-            else
-            {
-                valueStr = $"Export:{ExportByIndexFullNameString(uasset, uexp, index)}";
-            }
+            string valueStr = ExportParsingMachine.ObjectByIndexFullNameString(uasset, uexp, readingContext);
 
             ExportParsingMachine.ReportExportContents($"Object: {valueStr}");
         }
@@ -516,20 +503,6 @@ namespace daum
             });
 
             ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
-        }
-
-        private static string ImportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 importIndex)
-        {
-            importIndex = -1*importIndex - 1;
-            Int32 firstImportOffset = BitConverter.ToInt32(uasset, OffsetConstants.importOffsetOffset);
-            return ExportParsingMachine.FullNameString(uasset, firstImportOffset + importIndex * OffsetConstants.importDefSize + OffsetConstants.importNameOffset);
-        }
-
-        private static string ExportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 exportIndex)
-        {
-            exportIndex = exportIndex - 1;
-            Int32 firstExportOffset = BitConverter.ToInt32(uasset, exportOffsetOffset);
-            return ExportParsingMachine.FullNameString(uasset, firstExportOffset + exportIndex * exportDefSize + exportNameOffset);
         }
     }
 }

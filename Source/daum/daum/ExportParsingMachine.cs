@@ -34,6 +34,13 @@ namespace daum
         public const string float32PatternElementName = "Float32";
         public const string GUIDPatternElementName = "GUID";
         public const string SPNTPatternElementName = "SPNTS";
+        public const string BoolPatternElementName = "Bool";
+        public const string ObjectIndexPatternElementName = "ObjectIndex";
+        public const string NamePatternElementName = "Name";
+        public const string Uint16PatternElementName = "UInt16";
+        public const string Int32PatternElementName = "Int32";
+        public const string Uint32PatternElementName = "UInt32";
+        public const string Uint64PatternElementName = "UInt64";
 
         public const string TPDHPatternElementName = "TextPropertyDirtyHack";
 
@@ -138,7 +145,45 @@ namespace daum
             return nameString;
         }
 
-        public static string GUIDFromOffsetToString(ref Int32 offset)
+        public static string ObjectByIndexFullNameString(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            Int32 index = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
+
+            readingContext.currentUexpOffset += 4;
+
+            string valueStr;
+
+            if (index == 0)
+            {
+                valueStr = "null";
+            }
+            else if (index < 0)
+            {
+                valueStr = $"Import:{ImportByIndexFullNameString(uasset, uexp, index)}";
+            }
+            else
+            {
+                valueStr = $"Export:{ExportByIndexFullNameString(uasset, uexp, index)}";
+            }
+
+            return valueStr;
+        }
+
+        private static string ImportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 importIndex)
+        {
+            importIndex = -1 * importIndex - 1;
+            Int32 firstImportOffset = BitConverter.ToInt32(uasset, OffsetConstants.importOffsetOffset);
+            return ExportParsingMachine.FullNameString(uasset, firstImportOffset + importIndex * OffsetConstants.importDefSize + OffsetConstants.importNameOffset);
+        }
+
+        private static string ExportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 exportIndex)
+        {
+            exportIndex = exportIndex - 1;
+            Int32 firstExportOffset = BitConverter.ToInt32(uasset, OffsetConstants.exportOffsetOffset);
+            return ExportParsingMachine.FullNameString(uasset, firstExportOffset + exportIndex * OffsetConstants.exportDefSize + OffsetConstants.exportNameOffset);
+        }
+
+        public static string GUIDFromUexpOffsetToString(ref Int32 offset)
         {
             string Quad(Int32 StartPos)
             {
