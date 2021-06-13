@@ -59,12 +59,12 @@ namespace daum
             return Program.SizePrefixedStringFromOffsetOffsetAdvance(uasset, ref offset);
         }
 
-        protected static Int32? FindNameIndex(byte[] uasset, string name)
+        protected static Int32? FindNameIndex(string name)
         {
             return Array.IndexOf(Program.runData.nameMap, name);
         }
 
-        protected static Int32? GetNameIndex(byte[] uasset, List<string> args)
+        protected static Int32? GetNameIndex(List<string> args)
         {
             string arg0 = args.TakeArg();
 
@@ -78,7 +78,7 @@ namespace daum
             }
             else
             {
-                return (Int32)FindNameIndex(uasset, arg0);
+                return (Int32)FindNameIndex(arg0);
             }
         }
 
@@ -121,7 +121,7 @@ namespace daum
 
         protected static Int32? FindImportIndex(byte[] uasset, string name)
         {
-            Int32 nameIndex = (Int32)FindNameIndex(uasset, name);
+            Int32 nameIndex = (Int32)FindNameIndex(name);
 
             Int32 currentImportOffset = BitConverter.ToInt32(uasset, OffsetConstants.importOffsetOffset);
 
@@ -179,7 +179,7 @@ namespace daum
 
         protected static Int32? FindExportIndex(byte[] uasset, string name, Int32 nameAug)
         {
-            Int32 nameIndex = FindNameIndex(uasset, name).Value;
+            Int32 nameIndex = FindNameIndex(name).Value;
 
             Int32 currentExportDefIndex = 1;
             Int32 currentExportDefOffset = BitConverter.ToInt32(uasset, OffsetConstants.exportOffsetOffset);
@@ -386,10 +386,10 @@ namespace daum
         {
             useStandardBackup = true;
 
-            Int32 package = GetNameIndex(Program.runData.uasset, args).Value;
-            Int32 _class = GetNameIndex(Program.runData.uasset, args).Value;
+            Int32 package = GetNameIndex(args).Value;
+            Int32 _class = GetNameIndex(args).Value;
             Int32 outerIndex = GetImportIndex(Program.runData.uasset, args).Value;
-            Int32 name = GetNameIndex(Program.runData.uasset, args).Value;
+            Int32 name = GetNameIndex(args).Value;
 
             Program.runData.uasset = Insert(Program.runData.uasset, MakeImportDef(package, _class, outerIndex, name), addAtOffset);
 
@@ -410,10 +410,10 @@ namespace daum
         {
             useStandardBackup = true;
 
-            Int32? package = GetNameIndex(Program.runData.uasset, args);
-            Int32? _class = GetNameIndex(Program.runData.uasset, args);
+            Int32? package = GetNameIndex(args);
+            Int32? _class = GetNameIndex(args);
             Int32? outerIndex = GetImportIndex(Program.runData.uasset, args);
-            Int32? name = GetNameIndex(Program.runData.uasset, args);
+            Int32? name = GetNameIndex(args);
 
             Int32 replacementIndex = (replaceAtOffset - BitConverter.ToInt32(Program.runData.uasset, OffsetConstants.importOffsetOffset)) / OffsetConstants.importDefSize;
 
@@ -444,7 +444,7 @@ namespace daum
 
         protected override Int32? FindByName(List<string> args, int mapOffset, int mapRecordsCount)
         {
-            Int32 nameIndex = (Int32)FindNameIndex(Program.runData.uasset, args.TakeArg());
+            Int32 nameIndex = (Int32)FindNameIndex(args.TakeArg());
 
             Int32 currentImportOffset = mapOffset;
 
@@ -522,7 +522,7 @@ namespace daum
             Int32 super = Int32.Parse(args.TakeArg());
             Int32 template = GetImportExportIndex(Program.runData.uasset, args).Value;
             Int32 outer = GetImportExportIndex(Program.runData.uasset, args).Value;
-            Int32 name = GetNameIndex(Program.runData.uasset, args).Value;
+            Int32 name = GetNameIndex(args).Value;
             Int32 nameAug = Int32.Parse(args.TakeArg());
             Int32 flags = Int32.Parse(args.TakeArg());
 
@@ -550,7 +550,7 @@ namespace daum
             Int32 newExportFileOffset = newExportSerialOffset - BitConverter.ToInt32(Program.runData.uasset, headerSizeOffset);
 
             byte[] stubExport = new byte[12];
-            DOLib.WriteInt32IntoOffset(stubExport, FindNameIndex(Program.runData.uasset, "None").Value, 0);
+            DOLib.WriteInt32IntoOffset(stubExport, FindNameIndex("None").Value, 0);
             uexp = Insert(uexp, stubExport, newExportFileOffset);
 
             if (File.Exists(Program.runData.uexpFileName + ".AddStubExportBackup")) File.Delete(Program.runData.uexpFileName + ".AddStubExportBackup");

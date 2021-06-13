@@ -7,7 +7,7 @@ using DRGOffSetterLib;
 
 namespace daum
 {
-    class ExportChangeOperation : Operation
+    partial class ExportChangeOperation : Operation
     {
         private static ECOCustomRunDara customRunDara;
 
@@ -18,9 +18,10 @@ namespace daum
             { "-nullstr", (args) => customRunDara.nullString = true }
         };
 
-        private readonly static Dictionary<string, Func<List<string>, string>> modes = new Dictionary<string, Func<List<string>, string>>()
+        private readonly static Dictionary<string, ECOCustomRunDara.Mode> modes = new Dictionary<string, ECOCustomRunDara.Mode>()
         {
-            { "-r", ReplaceMode }
+            { "-a", ECOCustomRunDara.Mode.add },
+            { "-r", ECOCustomRunDara.Mode.rewrite }
         };
 
         private static Dictionary<string, ExportParsingMachine.PatternElementProcesser> contextSearchProcessers =
@@ -34,6 +35,7 @@ namespace daum
                 { ExportParsingMachine.arrayElementTypeNameIndexPatternElementName, ArrayElementTypeNameIndexContextSearcher },
                 { ExportParsingMachine.structTypeNameIndexPatternElementName, StructTypeNameIndexContextSearcher },
                 { ExportParsingMachine.structPropertyArrayTypePatternElementName, StructPropertyArrayTypeContextSearcher },
+                { ExportParsingMachine.MGTPatternElementName, MapGeneratorTypesContextSearcher },
 
                 { ExportParsingMachine.arrayRepeatPatternElementName, ArrayRepeatContextSearcher},
                 { ExportParsingMachine.elementCountPatternElementName, ElementCountContextSearcher },
@@ -45,14 +47,14 @@ namespace daum
 
                 { ExportParsingMachine.GUIDPatternElementName, ValueContextSearcher },
                 { ExportParsingMachine.float32PatternElementName, ValueContextSearcher },
-                { ExportParsingMachine.SPNTPatternElementName, ValueContextSearcher },
-                { ExportParsingMachine.BoolPatternElementName, ValueContextSearcher },
-                { ExportParsingMachine.NamePatternElementName, ValueContextSearcher },
-                { ExportParsingMachine.ObjectIndexPatternElementName, ValueContextSearcher },
-                { ExportParsingMachine.Uint16PatternElementName, ValueContextSearcher },
-                { ExportParsingMachine.Int32PatternElementName, ValueContextSearcher },
-                { ExportParsingMachine.Uint32PatternElementName, ValueContextSearcher },
-                { ExportParsingMachine.Uint64PatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.SPNTSPatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.boolPatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.namePatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.objectIndexPatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.uint16PatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.int32PatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.uint32PatternElementName, ValueContextSearcher },
+                { ExportParsingMachine.uint64PatternElementName, ValueContextSearcher },
 
                 { ExportParsingMachine.TPDHPatternElementName, TextPropertyDirtyHackContextSearcher }
             };
@@ -78,7 +80,7 @@ namespace daum
                 ConstantSize = 4
             } },
 
-            { ExportParsingMachine.SPNTPatternElementName, new PrimitiveTypeData()
+            { ExportParsingMachine.SPNTSPatternElementName, new PrimitiveTypeData()
             {
                 reader = (ref Int32 offset) =>
                 {
@@ -125,7 +127,7 @@ namespace daum
                     offset += count > 0 ? count : -2 * count;
                 }
             } },
-            { ExportParsingMachine.BoolPatternElementName, new PrimitiveTypeData()
+            { ExportParsingMachine.boolPatternElementName, new PrimitiveTypeData()
             {
                 reader = (ref Int32 offset) =>
                 {
@@ -137,7 +139,7 @@ namespace daum
                 },
                 ConstantSize = 1
             } },
-            { ExportParsingMachine.Uint16PatternElementName, new PrimitiveTypeData()
+            { ExportParsingMachine.uint16PatternElementName, new PrimitiveTypeData()
             {
                 reader = (ref Int32 offset) =>
                 {
@@ -149,7 +151,7 @@ namespace daum
                 },
                 ConstantSize = 2
             } },
-            { ExportParsingMachine.Int32PatternElementName, new PrimitiveTypeData()
+            { ExportParsingMachine.int32PatternElementName, new PrimitiveTypeData()
             {
                 reader = (ref Int32 offset) =>
                 {
@@ -161,7 +163,7 @@ namespace daum
                 },
                 ConstantSize = 4
             } },
-            { ExportParsingMachine.Uint32PatternElementName, new PrimitiveTypeData()
+            { ExportParsingMachine.uint32PatternElementName, new PrimitiveTypeData()
             {
                 reader = (ref Int32 offset) =>
                 {
@@ -173,7 +175,7 @@ namespace daum
                 },
                 ConstantSize = 4
             } },
-            { ExportParsingMachine.Uint64PatternElementName, new PrimitiveTypeData()
+            { ExportParsingMachine.uint64PatternElementName, new PrimitiveTypeData()
             {
                 reader = (ref Int32 offset) =>
                 {
@@ -185,7 +187,7 @@ namespace daum
                 },
                 ConstantSize = 8
             } },
-            { ExportParsingMachine.NamePatternElementName, new PrimitiveTypeData()
+            { ExportParsingMachine.namePatternElementName, new PrimitiveTypeData()
             {
                 reader = (ref Int32 offset) =>
                 {
@@ -194,14 +196,14 @@ namespace daum
                 writer = (ref Int32 offset, string value) =>
                 {
                     List<string> args = Program.ParseCommandString(value);
-                    Int32 nameIndex = GetNameIndex(Program.runData.uasset, args).Value;
+                    Int32 nameIndex = GetNameIndex(args).Value;
                     Int32 nameAug = Int32.Parse(args.TakeArg());
                     BitConverter.GetBytes(nameIndex).CopyTo(Program.runData.uexp, offset); offset += 4;
                     BitConverter.GetBytes(nameAug).CopyTo(Program.runData.uexp, offset); offset += 4;
                 },
                 ConstantSize = 8
             } },
-            { ExportParsingMachine.ObjectIndexPatternElementName, new PrimitiveTypeData()
+            { ExportParsingMachine.objectIndexPatternElementName, new PrimitiveTypeData()
             {
                 reader = (ref Int32 offset) =>
                 {
@@ -227,12 +229,14 @@ namespace daum
 
             customRunDara = new ECOCustomRunDara();
 
-            return modes[args.TakeArg()](args);
+            return Execute(args);
         }
 
 
-        private static string ReplaceMode(List<string> args)
+        private static string Execute(List<string> args)
         {
+            customRunDara.mode = modes[args.TakeArg()];
+
             byte[] uasset = Program.runData.uasset;
             byte[] uexp = Program.runData.uexp;
 
@@ -269,7 +273,7 @@ namespace daum
                 pattern = new List<string>() { "NTPL" },
                 patternAlphabet = contextSearchProcessers,
 
-                targetContext = new List<string>(targetContext.Split('/')),
+                targetContext = targetContext.Length > 0 ? new List<string>(targetContext.Split('/')) : new List<string>(),
 
                 structCategory = ReadingContext.StructCategory.export,
 
@@ -283,72 +287,90 @@ namespace daum
 
         private static void NTPLContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
-            string targetPropertyName = readingContext.targetContext[0];
-
-            string substructName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
-            readingContext.currentUexpOffset += 8;
-
-            if (substructName == ExportParsingMachine.endOfStructConfigName)
+            if (customRunDara.mode == ECOCustomRunDara.Mode.rewrite || readingContext.targetContext.Count > 0)
             {
-                readingContext.pattern.TakeArg();
-                return;
-            }
+                string targetPropertyName = readingContext.targetContext[0];
 
-            string typeName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
-            readingContext.currentUexpOffset += 8;
-
-            if (customRunDara.reportSearchSteps)
-            {
-                ExportParsingMachine.ReportExportContents("------------------------------");
-                ExportParsingMachine.ReportExportContents($"{substructName} is {typeName}");
-            }
-
-            List<string> propertyPattern;
-            try
-            {
-                propertyPattern = Program.GetPattern($"{Program.PatternFolders.property}/{typeName}");
-            }
-            catch
-            {
-                ExportParsingMachine.ReportExportContents($"Failed to find a pattern for property type {typeName}");
-
-                Int32 assumedSize = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
+                string substructName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
                 readingContext.currentUexpOffset += 8;
 
-                ExportParsingMachine.ReportExportContents($"Assumed property size {assumedSize}");
+                if (substructName == ExportParsingMachine.endOfStructConfigName)
+                {
+                    readingContext.pattern.TakeArg();
+                    return;
+                }
 
-                ExportParsingMachine.ReportExportContents($"Assumed property body {BitConverter.ToString(uexp, readingContext.currentUexpOffset + 1, assumedSize)}");
+                string typeName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
+                readingContext.currentUexpOffset += 8;
 
-                throw;
+                if (customRunDara.reportSearchSteps)
+                {
+                    ExportParsingMachine.ReportExportContents("------------------------------");
+                    ExportParsingMachine.ReportExportContents($"{substructName} is {typeName}");
+                }
+
+                List<string> propertyPattern;
+                try
+                {
+                    propertyPattern = Program.GetPattern($"{Program.PatternFolders.property}/{typeName}");
+                }
+                catch
+                {
+                    ExportParsingMachine.ReportExportContents($"Failed to find a pattern for property type {typeName}");
+
+                    Int32 assumedSize = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
+                    readingContext.currentUexpOffset += 8;
+
+                    ExportParsingMachine.ReportExportContents($"Assumed property size {assumedSize}");
+
+                    ExportParsingMachine.ReportExportContents($"Assumed property body {BitConverter.ToString(uexp, readingContext.currentUexpOffset + 1, assumedSize)}");
+
+                    throw;
+                }
+
+                if (substructName != targetPropertyName)
+                {
+                    propertyPattern.Insert(propertyPattern.IndexOf(ExportParsingMachine.sizeStartPatternElementName) + 1,
+                        skipContextPatternElementName);
+                }
+
+                List<string> targetSubContext = new List<string>(readingContext.targetContext);
+                targetSubContext.RemoveAt(0);
+
+                ExportParsingMachine.machineState.Push(new ReadingContext()
+                {
+                    currentUexpOffset = readingContext.currentUexpOffset,
+                    declaredSize = -1,
+                    declaredSizeStartOffset = -1,
+                    collectionElementCount = -1,
+
+                    targetContext = targetSubContext,
+
+                    pattern = propertyPattern,
+                    patternAlphabet = readingContext.patternAlphabet,
+
+                    structCategory = ReadingContext.StructCategory.nonExport,
+
+                    contextReturnProcesser = ContextReturnProcesser
+                });
+
+                ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
             }
-
-            if (substructName != targetPropertyName)
+            else if (customRunDara.mode == ECOCustomRunDara.Mode.add && readingContext.targetContext.Count == 0)
             {
-                propertyPattern.Insert(propertyPattern.IndexOf(ExportParsingMachine.sizeStartPatternElementName) + 1,
-                    skipContextPatternElementName);
+                byte[] insert = GenerateInsert(Program.ParseCommandString(customRunDara.newValue), new List<string>()
+                { propertyNamePatternElementName, propertyTypePatternElementName });
+
+                readingContext.sizeChange = insert.Length;
+                customRunDara.sizeChange = insert.Length;
+
+                Program.runData.uexp = Insert(uexp, insert, readingContext.currentUexpOffset);
+
+                readingContext.pattern.Clear();
+                readingContext.targetContext.Clear();
+
+                customRunDara.taskComplete = true;
             }
-
-            List<string> targetSubContext = new List<string>(readingContext.targetContext);
-            targetSubContext.RemoveAt(0);
-
-            ExportParsingMachine.machineState.Push(new ReadingContext()
-            {
-                currentUexpOffset = readingContext.currentUexpOffset,
-                declaredSize = -1,
-                declaredSizeStartOffset = -1,
-                collectionElementCount = -1,
-
-                targetContext = targetSubContext,
-
-                pattern = propertyPattern,
-                patternAlphabet = readingContext.patternAlphabet,
-
-                structCategory = ReadingContext.StructCategory.nonExport,
-
-                contextReturnProcesser = ContextReturnProcesser
-            });
-
-            ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
         }
 
         private static void SizeContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -520,6 +542,39 @@ namespace daum
             //}
         }
 
+        private static void MapGeneratorTypesContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            string tKey = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 8;
+
+            string tVal = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
+            readingContext.currentUexpOffset += 8;
+
+            if (customRunDara.reportSearchSteps) ExportParsingMachine.ReportExportContents($"<{tKey}, {tVal}>");
+
+            if (Program.PatternExists($"{Program.PatternFolders.body}/{tKey}") && Program.PatternExists($"{Program.PatternFolders.body}/{tVal}"))
+            {
+                List<string> keyPattern = Program.GetPattern($"{Program.PatternFolders.body}/{tKey}");
+                List<string> valPattern = Program.GetPattern($"{Program.PatternFolders.body}/{tVal}");
+
+                if (keyPattern.TakeArg() == ExportParsingMachine.arrayRepeatPatternElementName &&
+                    valPattern.TakeArg() == ExportParsingMachine.arrayRepeatPatternElementName)
+                {
+                    readingContext.pattern.Add(ExportParsingMachine.elementCountPatternElementName);
+                    readingContext.pattern.Add(ExportParsingMachine.arrayRepeatPatternElementName);
+                    readingContext.pattern.AddRange(keyPattern);
+                    readingContext.pattern.Add(ExportParsingMachine.arrayRepeatEndPatternElementName);
+
+                    readingContext.pattern.Add(ExportParsingMachine.elementCountPatternElementName);
+                    readingContext.pattern.Add(ExportParsingMachine.arrayRepeatPatternElementName);
+                    readingContext.pattern.AddRange(keyPattern);
+                    readingContext.pattern.AddRange(valPattern);
+                }
+            }
+        }
+
         private static void SkipContextContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             if (customRunDara.reportSearchSteps) ExportParsingMachine.ReportExportContents("Skipping context");
@@ -542,7 +597,7 @@ namespace daum
             PrimitiveTypeData primitiveType = primitiveTypes[primitiveTypeName];
 
 
-            if (readingContext.targetContext.Count == 2)
+            if (readingContext.targetContext.Count == 2 && customRunDara.mode == ECOCustomRunDara.Mode.rewrite)
             {
                 Int32 skipsLeft = Int32.Parse(readingContext.targetContext[1]);
 
@@ -674,13 +729,24 @@ namespace daum
             public Int32 changedExportSerialOffset = 0;
             public Int32 sizeChange = 0;
 
+            public Int32 insertDeclaredSizeOffset = -1;
+            public Int32 insertSizeStartOffset = -1;
+
             public NewStringValEncoding newStringValEncoding = NewStringValEncoding.utf8;
             public bool nullString = false;
+
+            public Mode mode;
 
             public enum NewStringValEncoding
             {
                 utf8,
                 utf16
+            }
+
+            public enum Mode
+            {
+                add,
+                rewrite
             }
         }
 

@@ -23,22 +23,22 @@ namespace daum
             { ExportParsingMachine.skipIfPatternEndsPatternElementName, SkipIfEndPatternElementProcesser },
             { ExportParsingMachine.skipIfPatternShorterThanPatternElemetnName, SkipIfPatternShorterThanPatternElementProcesser },
 
-            { ExportParsingMachine.Uint16PatternElementName, UInt16PatternElementProcesser },
+            { ExportParsingMachine.uint16PatternElementName, UInt16PatternElementProcesser },
 
-            { ExportParsingMachine.Int32PatternElementName, IntPatternElementProcesser },
-            { ExportParsingMachine.Uint32PatternElementName, UIntPatternElementProcesser },
+            { ExportParsingMachine.int32PatternElementName, IntPatternElementProcesser },
+            { ExportParsingMachine.uint32PatternElementName, UIntPatternElementProcesser },
 
-            { ExportParsingMachine.Uint64PatternElementName, UInt64PatternElementProcesser },
+            { ExportParsingMachine.uint64PatternElementName, UInt64PatternElementProcesser },
 
             { "ByteProp", BytePropPatternElementProcesser },
             { ExportParsingMachine.float32PatternElementName, FloatPatternElementProcesser },
             { ExportParsingMachine.GUIDPatternElementName, GUIDPatternElementProcesser },
-            { ExportParsingMachine.SPNTPatternElementName, SizePrefixedNullTermStringPatternElementProcesser },
+            { ExportParsingMachine.SPNTSPatternElementName, SizePrefixedNullTermStringPatternElementProcesser },
 
-            { ExportParsingMachine.BoolPatternElementName, BoolPatternElementProcesser },
+            { ExportParsingMachine.boolPatternElementName, BoolPatternElementProcesser },
 
-            { ExportParsingMachine.ObjectIndexPatternElementName, ObjectIndexPatternElementProcesser },
-            { ExportParsingMachine.NamePatternElementName, NamePatternElementProcesser },
+            { ExportParsingMachine.objectIndexPatternElementName, ObjectIndexPatternElementProcesser },
+            { ExportParsingMachine.namePatternElementName, NamePatternElementProcesser },
 
             { ExportParsingMachine.structTypeNameIndexPatternElementName, StructTypeNameIndexPatternElementProcesser },
             { structTypeHeuristicaPatternElementName, StructTypeHeurisitcaPatternElementProcesser },
@@ -48,7 +48,7 @@ namespace daum
             { ExportParsingMachine.arrayRepeatPatternElementName, ArrayRepeatPatternElementProcesser },
             { ExportParsingMachine.structPropertyArrayTypePatternElementName, StructPropertyArrayTypePatternElementProcesser },
 
-            { "MapGeneratorTypes", MapGeneratorTypesPatternElementProcesser },
+            { ExportParsingMachine.MGTPatternElementName, MapGeneratorTypesPatternElementProcesser },
 
             { ExportParsingMachine.TPDHPatternElementName, TextPropertyDirtyHackPatternElementProcesser },
 

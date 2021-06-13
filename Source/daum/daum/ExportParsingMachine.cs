@@ -31,16 +31,18 @@ namespace daum
         public const string structTypeNameIndexPatternElementName = "StructTypeNameIndex";
         public const string structPropertyArrayTypePatternElementName = "StructPropertyArrayType";
 
+        public const string MGTPatternElementName = "MapGeneratorTypes";
+
         public const string float32PatternElementName = "Float32";
         public const string GUIDPatternElementName = "GUID";
-        public const string SPNTPatternElementName = "SPNTS";
-        public const string BoolPatternElementName = "Bool";
-        public const string ObjectIndexPatternElementName = "ObjectIndex";
-        public const string NamePatternElementName = "Name";
-        public const string Uint16PatternElementName = "UInt16";
-        public const string Int32PatternElementName = "Int32";
-        public const string Uint32PatternElementName = "UInt32";
-        public const string Uint64PatternElementName = "UInt64";
+        public const string SPNTSPatternElementName = "SPNTS";
+        public const string boolPatternElementName = "Bool";
+        public const string objectIndexPatternElementName = "ObjectIndex";
+        public const string namePatternElementName = "Name";
+        public const string uint16PatternElementName = "UInt16";
+        public const string int32PatternElementName = "Int32";
+        public const string uint32PatternElementName = "UInt32";
+        public const string uint64PatternElementName = "UInt64";
 
         public const string TPDHPatternElementName = "TextPropertyDirtyHack";
 
