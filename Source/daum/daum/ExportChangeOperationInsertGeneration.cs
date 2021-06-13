@@ -19,26 +19,34 @@ namespace daum
             { ExportParsingMachine.sizePatternElementName, NullSizeFiller },
             { ExportParsingMachine.sizeStartPatternElementName, InsertSizeStartRecorder },
 
+            { ExportParsingMachine.structTypeNameIndexPatternElementName, StructTypeNameIndexFiller },
+
             { ExportParsingMachine.boolPatternElementName, NullValueFiller },
             { ExportParsingMachine.uint16PatternElementName, NullValueFiller },
             { ExportParsingMachine.int32PatternElementName, NullValueFiller },
             { ExportParsingMachine.uint32PatternElementName, NullValueFiller },
             { ExportParsingMachine.uint64PatternElementName, NullValueFiller },
             { ExportParsingMachine.float32PatternElementName, NullValueFiller },
+            { ExportParsingMachine.GUIDPatternElementName, NullValueFiller },
 
+            { ExportParsingMachine.NTPLPatternElementName, NullNTPLFiller },
 
-            { ExportParsingMachine.skipPatternElementName, SkipFiller }
+            { ExportParsingMachine.skipPatternElementName, SkipFiller },
+            { ExportParsingMachine.skipIfPatternEndsPatternElementName, ExceptionIfPatternEnds }
         };
 
         private static readonly Dictionary<string, Int32> defaultValueSizes = new Dictionary<string, int>()
         {
             { ExportParsingMachine.boolPatternElementName, 1 },
+
             { ExportParsingMachine.uint16PatternElementName, 2 },
             { ExportParsingMachine.int32PatternElementName, 4 },
             { ExportParsingMachine.uint32PatternElementName, 4 },
             { ExportParsingMachine.uint64PatternElementName, 8 },
 
-            { ExportParsingMachine.float32PatternElementName, 4 }
+            { ExportParsingMachine.float32PatternElementName, 4 },
+
+            { ExportParsingMachine.GUIDPatternElementName, 16 }
         };
 
         private static byte[] GenerateInsert(List<string> args, List<string> pattern)
@@ -76,6 +84,16 @@ namespace daum
             return Insert(originalArray, insert, originalArray.Length);
         }
 
+        private static byte[] NullNTPLFiller(byte[] originalArray, List<string> pattern, List<string> data)
+        {
+            pattern.TakeArg();
+
+            byte[] insert = new byte[8];
+            BitConverter.GetBytes(Array.IndexOf(Program.runData.nameMap, ExportParsingMachine.endOfStructConfigName)).CopyTo(insert, 0);
+
+            return Insert(originalArray, insert, originalArray.Length);
+        }
+
         private static byte[] SkipFiller(byte[] originalArray, List<string> pattern, List<string> data)
         {
             pattern.TakeArg();
@@ -86,17 +104,26 @@ namespace daum
             return Insert(originalArray, insert, originalArray.Length);
         }
 
+        private static byte[] ExceptionIfPatternEnds(byte[] originalArray, List<string> pattern, List<string> data)
+        {
+            pattern.TakeArg();
+
+            if (pattern.Count == 0)
+            {
+                throw new FormatException("Found mid-property pattern end during creation process, aborted");
+            }
+
+            return originalArray;
+        }
+
         private static byte[] PropertyNameFiller(byte[] originalArray, List<string> pattern, List<string> data)
         {
             pattern.TakeArg();
 
             Int32 nameIndex = GetNameIndex(data).Value;
-            Int32 nameAug = Int32.Parse(data.TakeArg());
 
             byte[] insert = new byte[8];
-
             BitConverter.GetBytes(nameIndex).CopyTo(insert, 0);
-            BitConverter.GetBytes(nameAug).CopyTo(insert, 4);
 
             return Insert(originalArray, insert, originalArray.Length);
         }
@@ -106,15 +133,12 @@ namespace daum
             pattern.TakeArg();
 
             Int32 nameIndex = GetNameIndex(data).Value;
-            Int32 nameAug = Int32.Parse(data.TakeArg());
 
             string nameString = Program.runData.nameMap[nameIndex];
             pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.property}/{nameString}"));
 
             byte[] insert = new byte[8];
-
             BitConverter.GetBytes(nameIndex).CopyTo(insert, 0);
-            BitConverter.GetBytes(nameAug).CopyTo(insert, 4);
 
             return Insert(originalArray, insert, originalArray.Length);
         }
@@ -137,6 +161,20 @@ namespace daum
             customRunDara.insertSizeStartOffset = originalArray.Length;
 
             return originalArray;
+        }
+
+        private static byte[] StructTypeNameIndexFiller(byte[] originalArray, List<string> pattern, List<string> data)
+        {
+            pattern.TakeArg();
+
+            Int32 structType = GetNameIndex(data).Value;
+
+            pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.structure}/{Program.runData.nameMap[structType]}"));
+
+            byte[] insert = new byte[8];
+            BitConverter.GetBytes(structType).CopyTo(insert, 0);
+
+            return Insert(originalArray, insert, originalArray.Length);
         }
     }
 }
