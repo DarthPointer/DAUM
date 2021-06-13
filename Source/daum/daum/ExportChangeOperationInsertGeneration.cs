@@ -20,6 +20,10 @@ namespace daum
             { ExportParsingMachine.sizeStartPatternElementName, InsertSizeStartRecorder },
 
             { ExportParsingMachine.structTypeNameIndexPatternElementName, StructTypeNameIndexFiller },
+            { ExportParsingMachine.arrayElementTypeNameIndexPatternElementName, ArrayTypeNameIndexFiller },
+
+            { ExportParsingMachine.elementCountPatternElementName, NullElementCountFiller },
+            { ExportParsingMachine.arrayRepeatPatternElementName, NullArrayFiller },
 
             { ExportParsingMachine.boolPatternElementName, NullValueFiller },
             { ExportParsingMachine.uint16PatternElementName, NullValueFiller },
@@ -175,6 +179,41 @@ namespace daum
             BitConverter.GetBytes(structType).CopyTo(insert, 0);
 
             return Insert(originalArray, insert, originalArray.Length);
+        }
+
+        private static byte[] ArrayTypeNameIndexFiller(byte[] originalArray, List<string> pattern, List<string> data)
+        {
+            pattern.TakeArg();
+
+            Int32 elementType = GetNameIndex(data).Value;
+
+            pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.body}/{Program.runData.nameMap[elementType]}"));
+
+            byte[] insert = new byte[8];
+            BitConverter.GetBytes(elementType).CopyTo(insert, 0);
+
+            return Insert(originalArray, insert, originalArray.Length);
+        }
+
+
+        private static byte[] NullElementCountFiller(byte[] originalArray, List<string> pattern, List<string> data)
+        {
+            pattern.TakeArg();
+
+            byte[] insert = new byte[4];
+            return Insert(originalArray, insert, originalArray.Length);
+        }
+
+        private static byte[] NullArrayFiller(byte[] originalArray, List<string> pattern, List<string> data)
+        {
+            pattern.TakeArg();
+
+            while (pattern.Count != 0 && pattern[0] != ExportParsingMachine.arrayRepeatEndPatternElementName)
+            {
+                pattern.TakeArg();
+            }
+
+            return originalArray;
         }
     }
 }
