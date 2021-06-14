@@ -37,6 +37,9 @@ namespace daum
                 { ExportParsingMachine.structPropertyArrayTypePatternElementName, StructPropertyArrayTypeContextSearcher },
                 { ExportParsingMachine.MGTPatternElementName, MapGeneratorTypesContextSearcher },
 
+                { ExportParsingMachine.propertyNameCopyPatternElementName, Skip8Bytes },
+                { ExportParsingMachine.structPropertyNamePatternElementName, Skip8Bytes },
+
                 { ExportParsingMachine.arrayRepeatPatternElementName, ArrayRepeatContextSearcher},
                 { ExportParsingMachine.elementCountPatternElementName, ElementCountContextSearcher },
 
@@ -573,6 +576,13 @@ namespace daum
                     readingContext.pattern.AddRange(valPattern);
                 }
             }
+        }
+
+        private static void Skip8Bytes(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            readingContext.currentUexpOffset += 8;
         }
 
         private static void SkipContextContextSearcher(byte[] uasset, byte[] uexp, ReadingContext readingContext)

@@ -11,6 +11,8 @@ namespace daum
         private const string propertyNamePatternElementName = "PropertyName";
         private const string propertyTypePatternElementName = "PropertyType";
 
+        private static Int32 newPropertyName;
+
         private static readonly Dictionary<string, AppendPatternData> patternFillers = new Dictionary<string, AppendPatternData>()
         {
             { propertyNamePatternElementName, PropertyNameFiller },
@@ -21,6 +23,10 @@ namespace daum
 
             { ExportParsingMachine.structTypeNameIndexPatternElementName, StructTypeNameIndexFiller },
             { ExportParsingMachine.arrayElementTypeNameIndexPatternElementName, ArrayTypeNameIndexFiller },
+            { ExportParsingMachine.structPropertyArrayTypePatternElementName, StructPropertyArrayTypeFiller },
+
+            { ExportParsingMachine.propertyNameCopyPatternElementName, PropertyNameCopyFiller },
+            { ExportParsingMachine.structPropertyNamePatternElementName, StructPropertyNameFiller },
 
             { ExportParsingMachine.elementCountPatternElementName, NullElementCountFiller },
             { ExportParsingMachine.arrayRepeatPatternElementName, NullArrayFiller },
@@ -124,7 +130,7 @@ namespace daum
         {
             pattern.TakeArg();
 
-            Int32 nameIndex = GetNameIndex(data).Value;
+            Int32 nameIndex = newPropertyName = GetNameIndex(data).Value;
 
             byte[] insert = new byte[8];
             BitConverter.GetBytes(nameIndex).CopyTo(insert, 0);
@@ -195,6 +201,40 @@ namespace daum
             return Insert(originalArray, insert, originalArray.Length);
         }
 
+        private static byte[] StructPropertyArrayTypeFiller(byte[] originalArray, List<string> pattern, List<string> data)
+        {
+            pattern.TakeArg();
+
+            Int32 elementType = GetNameIndex(data).Value;
+
+            pattern.Add(ExportParsingMachine.arrayRepeatPatternElementName);
+            pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.structure}/{Program.runData.nameMap[elementType]}"));
+
+            byte[] insert = new byte[8];
+            BitConverter.GetBytes(elementType).CopyTo(insert, 0);
+
+            return Insert(originalArray, insert, originalArray.Length);
+        }
+
+        private static byte[] PropertyNameCopyFiller(byte[] originalArray, List<string> pattern, List<string> data)
+        {
+            pattern.TakeArg();
+
+            byte[] insert = new byte[8];
+            BitConverter.GetBytes(newPropertyName).CopyTo(insert, 0);
+
+            return Insert(originalArray, insert, originalArray.Length);
+        }
+
+        private static byte[] StructPropertyNameFiller(byte[] originalArray, List<string> pattern, List<string> data)
+        {
+            pattern.TakeArg();
+
+            byte[] insert = new byte[8];
+            BitConverter.GetBytes(FindNameIndex("StructProperty").Value).CopyTo(insert, 0);
+
+            return Insert(originalArray, insert, originalArray.Length);
+        }
 
         private static byte[] NullElementCountFiller(byte[] originalArray, List<string> pattern, List<string> data)
         {

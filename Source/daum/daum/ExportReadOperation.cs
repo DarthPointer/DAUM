@@ -48,6 +48,9 @@ namespace daum
             { ExportParsingMachine.arrayRepeatPatternElementName, ArrayRepeatPatternElementProcesser },
             { ExportParsingMachine.structPropertyArrayTypePatternElementName, StructPropertyArrayTypePatternElementProcesser },
 
+            { ExportParsingMachine.propertyNameCopyPatternElementName, Skip8Bytes },
+            { ExportParsingMachine.structPropertyNamePatternElementName, Skip8Bytes },
+
             { ExportParsingMachine.MGTPatternElementName, MapGeneratorTypesPatternElementProcesser },
 
             { ExportParsingMachine.TPDHPatternElementName, TextPropertyDirtyHackPatternElementProcesser },
@@ -367,6 +370,13 @@ namespace daum
                 readingContext.pattern.Add("2");
                 readingContext.pattern.Add(ExportParsingMachine.arrayRepeatPatternElementName);
             }
+        }
+
+        private static void Skip8Bytes(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            readingContext.currentUexpOffset += 8;
         }
 
         private static void MapGeneratorTypesPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)

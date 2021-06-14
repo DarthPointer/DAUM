@@ -31,6 +31,9 @@ namespace daum
         public const string structTypeNameIndexPatternElementName = "StructTypeNameIndex";
         public const string structPropertyArrayTypePatternElementName = "StructPropertyArrayType";
 
+        public const string propertyNameCopyPatternElementName = "PropertyNameCopy";
+        public const string structPropertyNamePatternElementName = "StructPropertyName";
+
         public const string MGTPatternElementName = "MapGeneratorTypes";
 
         public const string float32PatternElementName = "Float32";
