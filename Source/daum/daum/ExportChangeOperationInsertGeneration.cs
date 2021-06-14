@@ -38,6 +38,8 @@ namespace daum
             { ExportParsingMachine.uint64PatternElementName, NullValueFiller },
             { ExportParsingMachine.float32PatternElementName, NullValueFiller },
             { ExportParsingMachine.GUIDPatternElementName, NullValueFiller },
+            { ExportParsingMachine.namePatternElementName, NullValueFiller },
+            { ExportParsingMachine.objectIndexPatternElementName, NullValueFiller },
 
             { ExportParsingMachine.NTPLPatternElementName, NullNTPLFiller },
 
@@ -56,7 +58,10 @@ namespace daum
 
             { ExportParsingMachine.float32PatternElementName, 4 },
 
-            { ExportParsingMachine.GUIDPatternElementName, 16 }
+            { ExportParsingMachine.GUIDPatternElementName, 16 },
+
+            { ExportParsingMachine.namePatternElementName, 8 },
+            { ExportParsingMachine.objectIndexPatternElementName, 4 }
         };
 
         private static byte[] GenerateInsert(List<string> args, List<string> pattern)

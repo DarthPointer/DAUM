@@ -367,6 +367,8 @@ namespace daum
                 readingContext.sizeChange = insert.Length;
                 customRunDara.sizeChange = insert.Length;
 
+                ExportParsingMachine.machineState.Peek().sizeChange = customRunDara.sizeChange;
+
                 Program.runData.uexp = Insert(uexp, insert, readingContext.currentUexpOffset);
 
                 readingContext.pattern.Clear();
@@ -433,21 +435,32 @@ namespace daum
             readingContext.pattern.TakeArg();
 
             bool thisArrayIsTarget = false;
+            bool thisArrayIsExtended = false;
             Int32 targetIndex = -1;
 
-            if (readingContext.targetContext.Count > 2)
+            if (readingContext.targetContext.Count > 1)
             {
                 if (readingContext.targetContext[0] == "Array")
                 {
                     Int32 skipsLeft = Int32.Parse(readingContext.targetContext[1]);
                     if (skipsLeft == 0)
                     {
-                        thisArrayIsTarget = true;
+                        if (readingContext.targetContext.Count > 2)
+                        {
+                            thisArrayIsTarget = true;
 
-                        readingContext.targetContext.TakeArg();
-                        readingContext.targetContext.TakeArg();
+                            readingContext.targetContext.TakeArg();
+                            readingContext.targetContext.TakeArg();
 
-                        targetIndex = Int32.Parse(readingContext.targetContext.TakeArg());
+                            targetIndex = Int32.Parse(readingContext.targetContext.TakeArg());
+                        }
+                        else if (readingContext.targetContext.Count == 2)
+                        {
+                            thisArrayIsExtended = true;
+
+                            readingContext.targetContext.TakeArg();
+                            readingContext.targetContext.TakeArg();
+                        }
                     }
                     else
                     {
@@ -508,6 +521,21 @@ namespace daum
                 });
 
                 ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
+            }
+
+            if (thisArrayIsExtended)
+            {
+                byte[] insert = GenerateInsert(Program.ParseCommandString(customRunDara.newValue), repeatedPattern);
+                customRunDara.sizeChange = insert.Length;
+                readingContext.sizeChange = customRunDara.sizeChange;
+
+                DOLib.AddToInt32ByOffset(uexp, 1, readingContext.contextCollectionElementCountOffset);
+
+                Program.runData.uexp = Insert(uexp, insert, readingContext.currentUexpOffset);
+
+                customRunDara.taskComplete = true;
+                readingContext.pattern.Clear();
+                readingContext.targetContext.Clear();
             }
         }
 
