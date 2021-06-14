@@ -86,13 +86,22 @@ Uexp editing:
 
 -echange operation.
 
--echange -r: overwrites values. Format: -echange -r [export] [path] [new_value]
+-echange -r: Overwrites values. Format: -echange -r [export] [path] [new_value]
 	Export is either
 		name string + aug integer
 		OR
 		-i export object index
 	Path is a set of '/'-separated names and indices, corelates with relevant pattern contents.
 	New value is a string for new value. TO DO: describe tricky and non-conventional input formats.
+
+	Additional args (add right after the mandatory part):
+		-r: Report steps of search for target path, may be useful for debugging.
+		-nullstr: DAUM gets string values from users without null terminator, but all
+			strings stored in the files have it. Thus empty string in DAUM will turn
+			into a single-char string with null-terminator. Use -nullstr if you need
+			the string to become completely empty. New value will be ignored but
+			CANT BE OMITED!
+		-utf16: Store string as 16-bit based unicode. 8-bit is default, no arg for it.
 
 	Path elements:
 		If you need to get inside a property with name X, then use its name.
@@ -111,6 +120,32 @@ Uexp editing:
 		X is relative offset from body start to data you change.
 		Type is name of pattern element for your data.
 		0 does not make much sense here but is not omitted in order for the used workaround to work.
+
+-echange -a: Adds properties or collection elements. Format: -echange -a [export] [path] [generation params].
+
+	Path works the same way as for -r. If you want to add a property, make it point to a struct ("" to
+	add in the export itself). For array extension, point path to array (.../Array/X). New element is 
+	added at the end.
+
+	Generation Params:
+		Data needed to understand what you want to add. It must be a sequence of parameters, put inside
+		quotes if there are few, separated with space. Example: "IsPercentage BoolProperty". If you need
+		one a parameter contain spaces, use \" combinations to quote it. "blah-blah \"param with spaces\"".
+
+	Params for new property:
+		Property name and property type. Each is either name string or "-i [index]" (which effectively means
+		you will use \" to quote it).
+		
+		If the property is an Array, you need extra param - element type. If it is a struct - extra
+		param for struct type. Array of structs will be "Name ArrayProperty StructProperty StructType".
+
+	Params for new array element:
+		You don't need any params for array extension but params cant be omitted, use "".
+
+	SPECIAL CASE:
+		TextProperty. Ma favorite. Needs extra param of raw bytes. Effectively inside \" quotes
+		because it should be a space-separated string "of hexadecimal bytes", just the way they
+		get copied to the clipboard from HxD.
 	
 
 Parser Funcionality:
