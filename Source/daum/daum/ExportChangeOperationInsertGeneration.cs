@@ -41,6 +41,8 @@ namespace daum
             { ExportParsingMachine.namePatternElementName, NullValueFiller },
             { ExportParsingMachine.objectIndexPatternElementName, NullValueFiller },
 
+            { ExportParsingMachine.TPDHPatternElementName, TextPropertyRawBodyInput },
+
             { ExportParsingMachine.NTPLPatternElementName, NullNTPLFiller },
 
             { ExportParsingMachine.skipPatternElementName, SkipFiller },
@@ -95,6 +97,15 @@ namespace daum
             Int32 skipSize = defaultValueSizes[pattern.TakeArg()];
 
             byte[] insert = new byte[skipSize];
+
+            return Insert(originalArray, insert, originalArray.Length);
+        }
+
+        private static byte[] TextPropertyRawBodyInput(byte[] originalArray, List<string> pattern, List<string> data)
+        {
+            pattern.TakeArg();
+
+            byte[] insert = RawBytesFromString(data.TakeArg());
 
             return Insert(originalArray, insert, originalArray.Length);
         }
@@ -259,6 +270,24 @@ namespace daum
             }
 
             return originalArray;
+        }
+
+        private static byte[] RawBytesFromString(string str)
+        {
+            string[] array = str.Split(' ');
+            if (array.Length == 1 && array[0] == "")
+            {
+                array = new string[0];
+            }
+
+            List<byte> result = new List<byte>();
+
+            foreach (string bytestr in array)
+            {
+                result.Add(byte.Parse(bytestr, style: System.Globalization.NumberStyles.HexNumber));
+            }
+
+            return result.ToArray();
         }
     }
 }
