@@ -502,6 +502,8 @@ namespace daum
 
             for (int i = 0; i < readingContext.collectionElementCount; i++)
             {
+                if (customRunDara.taskComplete) break;
+
                 if (customRunDara.reportSearchSteps) ExportParsingMachine.ReportExportContents($"Element {i}");
 
                 ExportParsingMachine.machineState.Push(new ReadingContext()
