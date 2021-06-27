@@ -105,7 +105,7 @@ Uexp editing:
 
 	Path elements:
 		If you need to get inside a property with name X, then use its name.
-		If you need to change privitive type value, use TypeValuePattern/X, where X is the "index" of relevant type entry for current "context".
+		If you need to change primitive type value, use TypeValuePattern/X, where X is the "index" of relevant type entry for current "context".
 		If you need to get into array, use Array/X, X is the "index" of relevant array entry. X is 0 in most cases which are plain ArrayProperty.
 		Use index to specify array element. Array/0/0 means 1st element of 1st array (see above).
 	Path Example: 
@@ -133,8 +133,7 @@ Uexp editing:
 		one a parameter contain spaces, use \" combinations to quote it. "blah-blah \"param with spaces\"".
 
 	Params for new property:
-		Property name and property type. Each is either name string or "-i [index]" (which effectively means
-		you will use \" to quote it).
+		Property name and property type. Each is either name string or -i [index].
 		
 		If the property is an Array, you need extra param - element type. If it is a struct - extra
 		param for struct type. Array of structs will be "Name ArrayProperty StructProperty StructType".
@@ -155,7 +154,7 @@ Parser Funcionality:
 export is eiter -i index or name with aug (like Upgradable 0). DO NOT SKIP THE AUG EVEN IF IT IS ZERO!
 
 Auxiliary commands:
-nullconfig: Creates NullConfig.json with all fields you must/can fill in case you broke your config.
+nullConfig: Creates NullConfig.json with all fields you must/can fill in case you broke your config.
 
 ONLY AS APPLICATION LAUNCH PARAMS: -s [Script File Name]:
 Executes all strings of given file as interactive mode commands.
