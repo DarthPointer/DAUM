@@ -127,6 +127,7 @@ namespace daum
                 skip = (ref Int32 offset) =>
                 {
                     Int32 count = BitConverter.ToInt32(Program.runData.uexp, offset);
+                    offset +=4;
                     offset += count > 0 ? count : -2 * count;
                 }
             } },
