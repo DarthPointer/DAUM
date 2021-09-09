@@ -109,14 +109,17 @@ namespace daum
                         if (runData.recordCommands && input != stopRecordingCommand) runData.commandsRecordingFile.WriteLine(input);
 
                         List<string> command = ParseCommandString(input);
-                        if (command[0].Length > 0)
+                        if (command.Count > 0)
                         {
-                            runLoop = ProcessCommand(config, runData, command, out bool doneSomething, out bool parsed);
-                            if (doneSomething)
+                            if (command[0].Length > 0)
                             {
-                                if (config.autoParseAfterSuccess && !parsed) ParseFilesWithDRGPareser(config.drgParserPath, runData.uassetFileName);
+                                runLoop = ProcessCommand(config, runData, command, out bool doneSomething, out bool parsed);
+                                if (doneSomething)
+                                {
+                                    if (config.autoParseAfterSuccess && !parsed) ParseFilesWithDRGPareser(config.drgParserPath, runData.uassetFileName);
 
-                                Console.WriteLine("Done!");
+                                    Console.WriteLine("Done!");
+                                }
                             }
                         }
                     }
