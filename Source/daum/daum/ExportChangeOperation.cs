@@ -277,7 +277,7 @@ namespace daum
                 pattern = new List<string>() { "NTPL" },
                 patternAlphabet = contextSearchProcessers,
 
-                targetContext = targetContext.Length > 0 ? new List<string>(targetContext.Split('/')) : new List<string>(),
+                targetContext = ExportParsingMachine.ParseContext(targetContext),
 
                 structCategory = ReadingContext.StructCategory.export,
 

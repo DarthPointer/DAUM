@@ -205,6 +205,19 @@ namespace daum
 
             return $"GUID: {guid1}-{guid2}-{guid3}-{guid4}";
         }
+
+        public static List<string> ParseContext(string contextString)
+        {
+            contextString = contextString.TrimEnd('/');
+            if (contextString.Length > 0)
+            {
+                return new List<string>(contextString.Split('/'));
+            }
+            else
+            {
+                return new List<string>();
+            }
+        }
     }
 
     class ReadingContext
