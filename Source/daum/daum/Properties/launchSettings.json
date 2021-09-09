@@ -2,7 +2,8 @@
   "profiles": {
     "daum": {
       "commandName": "Project",
-      "commandLineArgs": "D:\\DRGpacker\\WPN_AssaultRifle.uasset"
+      "commandLineArgs": "D:\\DRGpacker\\UPG_AssaultRifle_ArmorDamage.uasset",
+      "workingDirectory": "D:\\Repos\\DAUM\\Downloadables\\DAUM"
     }
   }
 }

@@ -228,12 +228,19 @@ namespace daum
 
         public override string ExecuteAndGetOffSetterAgrs(List<string> args, out bool doneSomething, out bool useStandardBackup)
         {
-            doneSomething = true;
-            useStandardBackup = true;
-
             customRunDara = new ECOCustomRunDara();
 
-            return Execute(args);
+            string offsetterArgs = Execute(args);
+
+            doneSomething = customRunDara.taskComplete;
+            useStandardBackup = customRunDara.taskComplete;
+
+            if (!customRunDara.taskComplete)
+            {
+                Console.WriteLine("Export Change Operation did not complete its task. Probably, a wrong target context was specified.");
+            }
+
+            return offsetterArgs;
         }
 
 
