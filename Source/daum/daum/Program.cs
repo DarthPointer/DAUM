@@ -68,7 +68,7 @@ namespace daum
                     {
                         List<string> parsedCommand = ParseCommandString(command);
 
-                        ProcessCommand(config, runData, parsedCommand, out bool _, out bool _);
+                        ProcessCommand(config, runData, parsedCommand, out _, out _, out _);
                     }
                     catch (Exception e)
                     {
@@ -91,7 +91,7 @@ namespace daum
 
                 if (argList.Count > 0)
                 {
-                    ProcessCommand(config, runData, argList, out _, out _);
+                    ProcessCommand(config, runData, argList, out _, out _, out _);
                     return;
                 }
 
@@ -113,12 +113,16 @@ namespace daum
                         {
                             if (command[0].Length > 0)
                             {
-                                runLoop = ProcessCommand(config, runData, command, out bool doneSomething, out bool parsed);
+                                runLoop = ProcessCommand(config, runData, command, out bool doneSomething, out bool parsed, out bool commandWasFound);
                                 if (doneSomething)
                                 {
                                     if (config.autoParseAfterSuccess && !parsed) ParseFilesWithDRGPareser(config.drgParserPath, runData.uassetFileName);
 
                                     Console.WriteLine("Done!");
+                                }
+                                if (!commandWasFound)
+                                {
+                                    Console.WriteLine("No valid command found");
                                 }
                             }
                         }
@@ -160,7 +164,7 @@ namespace daum
             }));
         }
 
-        private static bool ProcessCommand(Config config, RunData runData, List<string> command, out bool doneSomething, out bool parsed)
+        private static bool ProcessCommand(Config config, RunData runData, List<string> command, out bool doneSomething, out bool parsed, out bool commandWasFound)
         {
             parsed = false;
 
@@ -171,6 +175,7 @@ namespace daum
                     if (command[0] == exitCommand)
                     {
                         doneSomething = false;
+                        commandWasFound = true;
                         return false;
                     }
 
@@ -178,6 +183,7 @@ namespace daum
                     {
                         WriteConfig(new Config(), "NullConfig.json");
                         doneSomething = false;
+                        commandWasFound = true;
                         return true;
                     }
 
@@ -186,6 +192,7 @@ namespace daum
                         ParseFilesWithDRGPareser(config.drgParserPath, runData.uassetFileName);
                         parsed = true;
                         doneSomething = false;
+                        commandWasFound = true;
                         return true;
                     }
 
@@ -211,6 +218,7 @@ namespace daum
                         }
 
                         doneSomething = false;
+                        commandWasFound = true;
                         return true;
                     }
 
@@ -222,6 +230,7 @@ namespace daum
                         runData.commandsRecordingFileName = "";
 
                         doneSomething = false;
+                        commandWasFound = true;
                         return true;
                     }
 
@@ -248,13 +257,14 @@ namespace daum
                             Program.runData.uasset = File.ReadAllBytes(runData.uassetFileName);
                         }
 
+                        commandWasFound = true;
                         return true;
                     }
                 }
             }
 
             doneSomething = false;
-
+            commandWasFound = false;
             return true;
         }
 
