@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using DRGOffSetterLib;
 using System.IO;
 
 namespace daum
@@ -224,19 +223,6 @@ namespace daum
         }
     }
 
-    public class OffSetterCall : Operation
-    {
-        public override string ExecuteAndGetOffSetterAgrs(List<string> args, out bool doneSomething, out bool useStandardBackup)
-        {
-            useStandardBackup = false;
-            doneSomething = true;
-
-            Program.CallOffSetterWithArgs(' ' + string.Join(' ', args));
-            Program.runData.uasset = File.ReadAllBytes(Program.runData.uassetFileName);
-            return "";
-        }
-    }
-
     public abstract class MapOperation : Operation
     {
         private static string addOpKey = "-a";
@@ -369,7 +355,7 @@ namespace daum
             byte[] result = new byte[OffsetConstants.nameHashesSize + OffsetConstants.stringSizeDesignationSize + 1];
             result = Insert(result, StringToBytes(name), 4);
 
-            DOLib.WriteInt32IntoOffset(result, name.Length + 1, 0);
+            DAUMLib.WriteInt32IntoOffset(result, name.Length + 1, 0);
 
             return result;
         }
@@ -419,23 +405,23 @@ namespace daum
 
             if (package != null)
             {
-                DOLib.WriteInt32IntoOffset(Program.runData.uasset, package.Value, replaceAtOffset + OffsetConstants.importPackageOffset);
+                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, package.Value, replaceAtOffset + OffsetConstants.importPackageOffset);
                 Program.runData.importMap[replacementIndex].packageName = package.Value;
             }
             if (_class != null)
             {
-                DOLib.WriteInt32IntoOffset(Program.runData.uasset, _class.Value, replaceAtOffset + OffsetConstants.importClassOffset);
+                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, _class.Value, replaceAtOffset + OffsetConstants.importClassOffset);
                 Program.runData.importMap[replacementIndex].className = _class.Value;
             }
             if (outerIndex != null)
             {
-                DOLib.WriteInt32IntoOffset(Program.runData.uasset, outerIndex.Value, replaceAtOffset + OffsetConstants.importOuterIndexOffset);
+                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, outerIndex.Value, replaceAtOffset + OffsetConstants.importOuterIndexOffset);
                 Program.runData.importMap[replacementIndex].outerIndex = outerIndex.Value;
             }
             if (name != null)
             {
                 Program.runData.importMap[replacementIndex].importName = name.Value;
-                DOLib.WriteInt32IntoOffset(Program.runData.uasset, name.Value, replaceAtOffset + OffsetConstants.importNameOffset);
+                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, name.Value, replaceAtOffset + OffsetConstants.importNameOffset);
             }
 
 
@@ -485,10 +471,10 @@ namespace daum
         {
             byte[] result = new byte[OffsetConstants.importDefSize];
 
-            DOLib.WriteInt32IntoOffset(result, package, OffsetConstants.importPackageOffset);
-            DOLib.WriteInt32IntoOffset(result, _class, OffsetConstants.importClassOffset);
-            DOLib.WriteInt32IntoOffset(result, outerIndex, OffsetConstants.importOuterIndexOffset);
-            DOLib.WriteInt32IntoOffset(result, name, OffsetConstants.importNameOffset);
+            DAUMLib.WriteInt32IntoOffset(result, package, OffsetConstants.importPackageOffset);
+            DAUMLib.WriteInt32IntoOffset(result, _class, OffsetConstants.importClassOffset);
+            DAUMLib.WriteInt32IntoOffset(result, outerIndex, OffsetConstants.importOuterIndexOffset);
+            DAUMLib.WriteInt32IntoOffset(result, name, OffsetConstants.importNameOffset);
 
             return result;
         }
@@ -550,7 +536,7 @@ namespace daum
             Int32 newExportFileOffset = newExportSerialOffset - BitConverter.ToInt32(Program.runData.uasset, headerSizeOffset);
 
             byte[] stubExport = new byte[12];
-            DOLib.WriteInt32IntoOffset(stubExport, FindNameIndex("None").Value, 0);
+            DAUMLib.WriteInt32IntoOffset(stubExport, FindNameIndex("None").Value, 0);
             uexp = Insert(uexp, stubExport, newExportFileOffset);
 
             if (File.Exists(Program.runData.uexpFileName + ".AddStubExportBackup")) File.Delete(Program.runData.uexpFileName + ".AddStubExportBackup");
@@ -599,19 +585,19 @@ namespace daum
         {
             byte[] result = new byte[exportDefinitionSize];
 
-            DOLib.WriteInt32IntoOffset(result, _class, relativeClassOffset);
-            DOLib.WriteInt32IntoOffset(result, super, relativeSuperOffset);
-            DOLib.WriteInt32IntoOffset(result, template, relativeTemlateOffset);
-            DOLib.WriteInt32IntoOffset(result, outer, relativeOuterOffset);
-            DOLib.WriteInt32IntoOffset(result, name, relativeObjectNameOffset);
-            DOLib.WriteInt32IntoOffset(result, nameAug, relativeObjectNameOffset + 4);
-            DOLib.WriteInt32IntoOffset(result, flags, relativeObjectFlagsOffset);
-            DOLib.WriteInt32IntoOffset(result, size, relativeSerialSizeOffset);
-            DOLib.WriteInt32IntoOffset(result, serialOffset, relativeSerialOffsetOffset);
+            DAUMLib.WriteInt32IntoOffset(result, _class, relativeClassOffset);
+            DAUMLib.WriteInt32IntoOffset(result, super, relativeSuperOffset);
+            DAUMLib.WriteInt32IntoOffset(result, template, relativeTemlateOffset);
+            DAUMLib.WriteInt32IntoOffset(result, outer, relativeOuterOffset);
+            DAUMLib.WriteInt32IntoOffset(result, name, relativeObjectNameOffset);
+            DAUMLib.WriteInt32IntoOffset(result, nameAug, relativeObjectNameOffset + 4);
+            DAUMLib.WriteInt32IntoOffset(result, flags, relativeObjectFlagsOffset);
+            DAUMLib.WriteInt32IntoOffset(result, size, relativeSerialSizeOffset);
+            DAUMLib.WriteInt32IntoOffset(result, serialOffset, relativeSerialOffsetOffset);
             Int32 currentOtherOffset = relativeOtherDataOffset;
             for (int i = 0; i < otherDataInt32Count; i++)
             {
-                DOLib.WriteInt32IntoOffset(result, other[i], currentOtherOffset);
+                DAUMLib.WriteInt32IntoOffset(result, other[i], currentOtherOffset);
                 currentOtherOffset += 4;
             }
 

@@ -15,5 +15,4 @@ D:\Repos\DAUM\Source\daum\daum\obj\Debug\net5.0\daum.dll
 D:\Repos\DAUM\Source\daum\daum\obj\Debug\net5.0\ref\daum.dll
 D:\Repos\DAUM\Source\daum\daum\obj\Debug\net5.0\daum.pdb
 D:\Repos\DAUM\Source\daum\daum\obj\Debug\net5.0\daum.genruntimeconfig.cache
-D:\Repos\DAUM\Source\daum\daum\bin\Debug\net5.0\DRGOffSetterLib.dll
 D:\Repos\DAUM\Source\daum\daum\obj\Debug\net5.0\daum.csproj.AssemblyReference.cache

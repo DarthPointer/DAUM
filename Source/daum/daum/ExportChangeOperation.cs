@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using DRGOffSetterLib;
 
 namespace daum
 {
@@ -101,21 +98,21 @@ namespace daum
                     {
                         insert = new byte[0];
                         newStringSize = 0;
-                        DOLib.WriteInt32IntoOffset(Program.runData.uexp, newStringSize, offset);
+                        DAUMLib.WriteInt32IntoOffset(Program.runData.uexp, newStringSize, offset);
                     }
                     else if (customRunDara.newStringValEncoding == ECOCustomRunDara.NewStringValEncoding.utf8)
                     {
                         insert = Encoding.UTF8.GetBytes(value);
                         insert = Insert(insert, new byte[]{0}, insert.Length);
                         newStringSize = insert.Length;
-                        DOLib.WriteInt32IntoOffset(Program.runData.uexp, newStringSize, offset);
+                        DAUMLib.WriteInt32IntoOffset(Program.runData.uexp, newStringSize, offset);
                     }
                     else //if (customRunDara.newStringValEncoding == ECOCustomRunDara.NewStringValEncoding.utf16)
                     {
                         insert = Encoding.Unicode.GetBytes(value);
                         insert = Insert(insert, new byte[]{0, 0}, insert.Length);
                         newStringSize = insert.Length;
-                        DOLib.WriteInt32IntoOffset(Program.runData.uexp, newStringSize/-2, offset);
+                        DAUMLib.WriteInt32IntoOffset(Program.runData.uexp, newStringSize/-2, offset);
                     }
 
                     Program.runData.uexp = Insert(Program.runData.uexp, insert, offset + 4);
@@ -539,7 +536,7 @@ namespace daum
                 customRunDara.sizeChange = insert.Length;
                 readingContext.sizeChange = customRunDara.sizeChange;
 
-                DOLib.AddToInt32ByOffset(uexp, 1, readingContext.contextCollectionElementCountOffset);
+                DAUMLib.AddToInt32ByOffset(uexp, 1, readingContext.contextCollectionElementCountOffset);
 
                 Program.runData.uexp = Insert(uexp, insert, readingContext.currentUexpOffset);
 
@@ -745,7 +742,7 @@ namespace daum
             upperContext.sizeChange += finishedContext.sizeChange;
             if (finishedContext.contextDeclaredSizeOffset != 0)
             {
-                DOLib.AddToInt32ByOffset(Program.runData.uexp, finishedContext.sizeChange, finishedContext.contextDeclaredSizeOffset);
+                DAUMLib.AddToInt32ByOffset(Program.runData.uexp, finishedContext.sizeChange, finishedContext.contextDeclaredSizeOffset);
             }
 
             if (customRunDara.taskComplete)
