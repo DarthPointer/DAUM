@@ -2,7 +2,7 @@
 
 namespace daum
 {
-    public static class HeaderOffSets
+    public static class HeaderOffsets
     {
         // ----------------------------------------- 
         // NameMap

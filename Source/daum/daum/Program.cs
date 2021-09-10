@@ -400,8 +400,8 @@ namespace daum
 
         private static void LoadNames()
         {
-            Int32 nameCount = BitConverter.ToInt32(runData.uasset, HeaderOffSets.nameCountOffset);
-            Int32 currentNameOffset = BitConverter.ToInt32(runData.uasset, HeaderOffSets.nameOffsetOffset);
+            Int32 nameCount = BitConverter.ToInt32(runData.uasset, HeaderOffsets.nameCountOffset);
+            Int32 currentNameOffset = BitConverter.ToInt32(runData.uasset, HeaderOffsets.nameOffsetOffset);
 
             runData.nameMap = new string[nameCount];
 
@@ -409,7 +409,7 @@ namespace daum
             {
                 runData.nameMap[i] = SizePrefixedStringFromOffsetOffsetAdvance(runData.uasset, ref currentNameOffset);
 
-                currentNameOffset += HeaderOffSets.nameHashesSize;
+                currentNameOffset += HeaderOffsets.nameHashesSize;
             }
         }
 
@@ -436,8 +436,8 @@ namespace daum
 
         private static void LoadImports()
         {
-            Int32 importCount = BitConverter.ToInt32(runData.uasset, HeaderOffSets.importCountOffset);
-            Int32 currentImportOffset = BitConverter.ToInt32(runData.uasset, HeaderOffSets.importOffsetOffset);
+            Int32 importCount = BitConverter.ToInt32(runData.uasset, HeaderOffsets.importCountOffset);
+            Int32 currentImportOffset = BitConverter.ToInt32(runData.uasset, HeaderOffsets.importOffsetOffset);
 
             runData.importMap = new ImportData[importCount];
 
@@ -445,7 +445,7 @@ namespace daum
             {
                 runData.importMap[i] = GetImportDataFromOffset(runData.uasset, currentImportOffset);
 
-                currentImportOffset += HeaderOffSets.importDefSize;
+                currentImportOffset += HeaderOffsets.importDefSize;
             }
         }
 
@@ -453,10 +453,10 @@ namespace daum
         {
             return new ImportData()
             {
-                packageName = BitConverter.ToInt32(uasset, offset + HeaderOffSets.importPackageOffset),
-                className = BitConverter.ToInt32(uasset, offset + HeaderOffSets.importClassOffset),
-                outerIndex = BitConverter.ToInt32(uasset, offset + HeaderOffSets.importOuterIndexOffset),
-                importName = BitConverter.ToInt32(uasset, offset + HeaderOffSets.importNameOffset)
+                packageName = BitConverter.ToInt32(uasset, offset + HeaderOffsets.importPackageOffset),
+                className = BitConverter.ToInt32(uasset, offset + HeaderOffsets.importClassOffset),
+                outerIndex = BitConverter.ToInt32(uasset, offset + HeaderOffsets.importOuterIndexOffset),
+                importName = BitConverter.ToInt32(uasset, offset + HeaderOffsets.importNameOffset)
             };
         }
 
