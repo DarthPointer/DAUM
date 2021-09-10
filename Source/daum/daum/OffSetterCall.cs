@@ -7,11 +7,10 @@ namespace daum
     {
         public override string ExecuteAndGetOffSetterAgrs(List<string> args, out bool doneSomething, out bool useStandardBackup)
         {
-            useStandardBackup = false;
+            useStandardBackup = true;
             doneSomething = true;
 
-            Program.CallOffSetterWithArgs(' ' + string.Join(' ', args));
-            Program.runData.uasset = File.ReadAllBytes(Program.runData.uassetFileName);
+            Program.CallOffSetterWithArgs(string.Join(' ', args));
             return "";
         }
     }

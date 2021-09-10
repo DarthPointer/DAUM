@@ -40,6 +40,8 @@ namespace daum
 
         public const Int32 dependsOffsetOffset = 73;
 
+        public const Int32 exportCountOffset2 = 113;
+
         public const Int32 nameCountOffset2 = 117;
 
         public const Int32 assetRegistryDataOffsetOffset = 165;

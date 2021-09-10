@@ -6,6 +6,8 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 
+using daum.OffSetter;
+
 namespace daum
 {
     class Program
@@ -238,7 +240,12 @@ namespace daum
                     {
                         string offSetterCallArgs = operations[operationKey].ExecuteAndGetOffSetterAgrs(command, out doneSomething, out bool useStandardBackup);
 
-                        if (useStandardBackup)
+                        if (offSetterCallArgs != "")
+                        {
+                            CallOffSetterWithArgs(offSetterCallArgs);
+                        }
+
+                        if (useStandardBackup || offSetterCallArgs != "")
                         {
                             if (File.Exists(runData.uassetFileName + ".daum")) File.Delete(runData.uassetFileName + ".daum");
                             Directory.Move(runData.uassetFileName, runData.uassetFileName + ".daum");
@@ -247,12 +254,6 @@ namespace daum
                             if (File.Exists(runData.uexpFileName + ".daum")) File.Delete(runData.uexpFileName + ".daum");
                             Directory.Move(runData.uexpFileName, runData.uexpFileName + ".daum");
                             File.WriteAllBytes(runData.uexpFileName, Program.runData.uexp);
-                        }
-
-                        if (offSetterCallArgs != "")
-                        {
-                            CallOffSetterWithArgs(offSetterCallArgs + " -m -r");
-                            Program.runData.uasset = File.ReadAllBytes(runData.uassetFileName);
                         }
 
                         commandWasFound = true;
@@ -292,10 +293,9 @@ namespace daum
             }
         }
 
-        public static void CallOffSetterWithArgs(string offSetterCallArgs, string tgtFile = null)
+        public static void CallOffSetterWithArgs(string offSetterCallArgs)
         {
-            Process offSetter = Process.Start(config.offsetterPath, (tgtFile ?? runData.uassetFileName) + offSetterCallArgs);
-            offSetter.WaitForExit();
+            OffSetterExecution.Execute(offSetterCallArgs);
         }
 
         private static void ParseFilesWithDRGPareser(string parserPath, string uassetFileName)

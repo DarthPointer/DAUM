@@ -389,7 +389,7 @@ namespace daum
                 importName = name
             };
 
-            return $" -i {HeaderOffsets.importDefSize} 1";
+            return $"-i {HeaderOffsets.importDefSize} 1";
         }
 
         protected override string ReplaceOperation(List<string> args, int replaceAtOffset, out bool useStandardBackup)
@@ -502,7 +502,7 @@ namespace daum
 
         protected override string AddOperation(List<string> args, int addAtOffset, out bool useStandardBackup)
         {
-            useStandardBackup = false;
+            useStandardBackup = true;
 
             Int32 _class = GetImportExportIndex(Program.runData.uasset, args).Value;
             Int32 super = Int32.Parse(args.TakeArg());
@@ -522,31 +522,16 @@ namespace daum
 
             Program.runData.uasset = Insert(Program.runData.uasset, MakeExportDef(_class, super, template, outer, name, nameAug, flags, 0, serialOffset, other), addAtOffset);
 
-            if (File.Exists(Program.runData.uassetFileName + ".AddExportDefBackup")) File.Delete(Program.runData.uassetFileName + ".AddExportDefBackup");
-            Directory.Move(Program.runData.uassetFileName, Program.runData.uassetFileName + ".AddExportDefBackup");
-
-            File.WriteAllBytes(Program.runData.uassetFileName, Program.runData.uasset);
-            Program.CallOffSetterWithArgs(" -edef 104 1 -r -m");
-
-            Program.runData.uasset = File.ReadAllBytes(Program.runData.uassetFileName);
-
-            byte[] uexp = File.ReadAllBytes(Program.runData.uexpFileName);
+            Program.CallOffSetterWithArgs("-edef 104 1");
 
             Int32 newExportSerialOffset = BitConverter.ToInt32(Program.runData.uasset, addAtOffset + relativeSerialOffsetOffset);
             Int32 newExportFileOffset = newExportSerialOffset - BitConverter.ToInt32(Program.runData.uasset, headerSizeOffset);
 
             byte[] stubExport = new byte[12];
             DAUMLib.WriteInt32IntoOffset(stubExport, FindNameIndex("None").Value, 0);
-            uexp = Insert(uexp, stubExport, newExportFileOffset);
+            Program.runData.uexp = Insert(Program.runData.uexp, stubExport, newExportFileOffset);
 
-            if (File.Exists(Program.runData.uexpFileName + ".AddStubExportBackup")) File.Delete(Program.runData.uexpFileName + ".AddStubExportBackup");
-            File.Move(Program.runData.uexpFileName, Program.runData.uexpFileName + ".AddStubExportBackup");
-
-            File.WriteAllBytes(Program.runData.uexpFileName, uexp);
-
-            Program.CallOffSetterWithArgs($" -e 12 {newExportSerialOffset} -r -m");
-
-            Program.runData.uasset = File.ReadAllBytes(Program.runData.uassetFileName);
+            Program.CallOffSetterWithArgs($"-e 12 {newExportSerialOffset}");
 
             return "";
         }

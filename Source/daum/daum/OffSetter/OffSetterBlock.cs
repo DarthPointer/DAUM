@@ -8,7 +8,7 @@ namespace daum.OffSetter
     {
         protected abstract ReadOnlyCollection<Int32> GetAffectedGlobalOffsets();
 
-        public void OffSet(ref byte[] span, Dictionary<RequiredOffSettingData, Int32> args)
+        public void OffSet(byte[] span, Dictionary<RequiredOffSettingData, Int32> args)
         {
             if (args.ContainsKey(RequiredOffSettingData.SizeChange))
             {
@@ -80,6 +80,7 @@ namespace daum.OffSetter
         protected override void LocalOffSet(byte[] span, Dictionary<RequiredOffSettingData, int> args)
         {
             DAUMLib.AddToInt32ByOffset(span, args[RequiredOffSettingData.CountChange], HeaderOffsets.exportCountOffset);
+            DAUMLib.AddToInt32ByOffset(span, args[RequiredOffSettingData.CountChange], HeaderOffsets.exportCountOffset2);
         }
 
         public override void PreviousBlocksOffSet(byte[] span, int sizeChange) { }
