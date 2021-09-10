@@ -176,15 +176,15 @@ namespace daum
         private static string ImportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 importIndex)
         {
             importIndex = -1 * importIndex - 1;
-            Int32 firstImportOffset = BitConverter.ToInt32(uasset, OffsetConstants.importOffsetOffset);
-            return ExportParsingMachine.FullNameString(uasset, firstImportOffset + importIndex * OffsetConstants.importDefSize + OffsetConstants.importNameOffset);
+            Int32 firstImportOffset = BitConverter.ToInt32(uasset, HeaderOffSets.importOffsetOffset);
+            return ExportParsingMachine.FullNameString(uasset, firstImportOffset + importIndex * HeaderOffSets.importDefSize + HeaderOffSets.importNameOffset);
         }
 
         private static string ExportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 exportIndex)
         {
             exportIndex = exportIndex - 1;
-            Int32 firstExportOffset = BitConverter.ToInt32(uasset, OffsetConstants.exportOffsetOffset);
-            return ExportParsingMachine.FullNameString(uasset, firstExportOffset + exportIndex * OffsetConstants.exportDefSize + OffsetConstants.exportNameOffset);
+            Int32 firstExportOffset = BitConverter.ToInt32(uasset, HeaderOffSets.exportOffsetOffset);
+            return ExportParsingMachine.FullNameString(uasset, firstExportOffset + exportIndex * HeaderOffSets.exportDefSize + HeaderOffSets.exportNameOffset);
         }
 
         public static string GUIDFromUexpOffsetToString(ref Int32 offset)

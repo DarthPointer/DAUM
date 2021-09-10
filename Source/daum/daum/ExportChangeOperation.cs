@@ -249,13 +249,13 @@ namespace daum
             byte[] uexp = Program.runData.uexp;
 
             Int32 exportIndex = GetExportIndex(uasset, args).Value;
-            Int32 exportDefOffset = BitConverter.ToInt32(uasset, OffsetConstants.exportOffsetOffset) + (exportIndex - 1) * OffsetConstants.exportDefSize;
+            Int32 exportDefOffset = BitConverter.ToInt32(uasset, HeaderOffSets.exportOffsetOffset) + (exportIndex - 1) * HeaderOffSets.exportDefSize;
 
-            customRunDara.changedExportSerialOffset = BitConverter.ToInt32(uasset, exportDefOffset + OffsetConstants.exportSerialOffsetOffset);
+            customRunDara.changedExportSerialOffset = BitConverter.ToInt32(uasset, exportDefOffset + HeaderOffSets.exportSerialOffsetOffset);
 
-            Int32 exportOffset = BitConverter.ToInt32(uasset, exportDefOffset + OffsetConstants.exportSerialOffsetOffset) -
+            Int32 exportOffset = BitConverter.ToInt32(uasset, exportDefOffset + HeaderOffSets.exportSerialOffsetOffset) -
                 BitConverter.ToInt32(uasset, headerSizeOffset);
-            Int32 exportSize = BitConverter.ToInt32(uasset, exportDefOffset + OffsetConstants.exportSerialSizeOffset);
+            Int32 exportSize = BitConverter.ToInt32(uasset, exportDefOffset + HeaderOffSets.exportSerialSizeOffset);
 
             string targetContext = args.TakeArg();
             customRunDara.newValue = args.TakeArg();

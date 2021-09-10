@@ -29,16 +29,17 @@ namespace daum.OffSetter
     [Block(humanReadableBlockName = "names map", offSettingArguments = RequiredOffSettingData.SizeChange | RequiredOffSettingData.CountChange)]
     class NamesMap : OffSetterBlock
     {
-        private static Int32[] nameCountOffsets = { 41, 117 };
-        private static Int32[] affectedOffsetsOffsets = { 24, 61, 69, 73, 165, 169, 189 };
         protected override ReadOnlyCollection<Int32> GetAffectedGlobalOffsets()
         {
-            return Array.AsReadOnly(affectedOffsetsOffsets);
+            return Array.AsReadOnly(new Int32[] { HeaderOffSets.totalHeaderSizeOffset,
+            HeaderOffSets.exportOffsetOffset, HeaderOffSets.importOffsetOffset,
+            HeaderOffSets.dependsOffsetOffset, HeaderOffSets.assetRegistryDataOffsetOffset,
+            HeaderOffSets.bulkDataOffsetOffset, HeaderOffSets.preloadDependencyOffsetOffset});
         }
 
         protected override void LocalOffSet(byte[] span, Dictionary<RequiredOffSettingData, int> args)
         {
-            foreach (Int32 offset in nameCountOffsets)
+            foreach (Int32 offset in new Int32[] { HeaderOffSets.nameCountOffset, HeaderOffSets.nameCountOffset2 })
             {
                 DAUMLib.AddToInt32ByOffset(span, args[RequiredOffSettingData.CountChange], offset);
             }
@@ -50,16 +51,17 @@ namespace daum.OffSetter
     [Block(humanReadableBlockName = "imports map", offSettingArguments = RequiredOffSettingData.SizeChange | RequiredOffSettingData.CountChange)]
     class ImportsMap : OffSetterBlock
     {
-        private static Int32 importCountOffset = 65;
-        private static Int32[] affectedOffsetsOffsets = { 24, 61, 73, 165, 169, 189 };
         protected override ReadOnlyCollection<Int32> GetAffectedGlobalOffsets()
         {
-            return Array.AsReadOnly(affectedOffsetsOffsets);
+            return Array.AsReadOnly(new Int32[] { HeaderOffSets.totalHeaderSizeOffset,
+            HeaderOffSets.exportOffsetOffset, HeaderOffSets.dependsOffsetOffset,
+            HeaderOffSets.assetRegistryDataOffsetOffset, HeaderOffSets.bulkDataOffsetOffset,
+            HeaderOffSets.preloadDependencyOffsetOffset});
         }
 
         protected override void LocalOffSet(byte[] span, Dictionary<RequiredOffSettingData, int> args)
         {
-            DAUMLib.AddToInt32ByOffset(span, args[RequiredOffSettingData.CountChange], importCountOffset);
+            DAUMLib.AddToInt32ByOffset(span, args[RequiredOffSettingData.CountChange], HeaderOffSets.importCountOffset);
         }
 
         public override void PreviousBlocksOffSet(byte[] span, int sizeChange) { }
@@ -68,17 +70,16 @@ namespace daum.OffSetter
     [Block(humanReadableBlockName = "exports map", offSettingArguments = RequiredOffSettingData.SizeChange | RequiredOffSettingData.CountChange)]
     class ExportsMap : OffSetterBlock
     {
-        private static Int32 exportCountOffset = 57;
-        private static Int32[] affectedOffsetsOffsets = { 24, 73, 165, 169, 189 };
-
         protected override ReadOnlyCollection<Int32> GetAffectedGlobalOffsets()
         {
-            return Array.AsReadOnly(affectedOffsetsOffsets);
+            return Array.AsReadOnly(new Int32[] { HeaderOffSets.totalHeaderSizeOffset,
+            HeaderOffSets.dependsOffsetOffset, HeaderOffSets.assetRegistryDataOffsetOffset,
+            HeaderOffSets.bulkDataOffsetOffset, HeaderOffSets.preloadDependencyOffsetOffset});
         }
 
         protected override void LocalOffSet(byte[] span, Dictionary<RequiredOffSettingData, int> args)
         {
-            DAUMLib.AddToInt32ByOffset(span, args[RequiredOffSettingData.CountChange], exportCountOffset);
+            DAUMLib.AddToInt32ByOffset(span, args[RequiredOffSettingData.CountChange], HeaderOffSets.exportCountOffset);
         }
 
         public override void PreviousBlocksOffSet(byte[] span, int sizeChange) { }
@@ -87,17 +88,9 @@ namespace daum.OffSetter
     [Block(humanReadableBlockName = "exported (.uexp) data", offSettingArguments = RequiredOffSettingData.SizeChange | RequiredOffSettingData.SizeChangeOffset)]
     class Exports : OffSetterBlock
     {
-        private static Int32 exportsCountOffset = 57;
-        private static Int32 exportsMapOffsetOffset = 61;
-        private static Int32 relativeSerialOffsetOffset = 36;
-        private static Int32 relativeSerialSizeOffset = 28;
-        private static Int32 exportReferenceSize = 104;
-
-
-        private Int32[] affectedOffsetsOffsets = { 169 };
         protected override ReadOnlyCollection<Int32> GetAffectedGlobalOffsets()
         {
-            return Array.AsReadOnly(affectedOffsetsOffsets);
+            return Array.AsReadOnly(new Int32[] { HeaderOffSets.bulkDataOffsetOffset });
         }
 
         protected override void LocalOffSet(byte[] span, Dictionary<RequiredOffSettingData, int> args)
@@ -114,8 +107,8 @@ namespace daum.OffSetter
 
         private static void SerialOffsetting(byte[] span, Int32 sizeChange, Int32 sizeChangeOffset)
         {
-            Int32 exportsCount = BitConverter.ToInt32(span, exportsCountOffset);
-            Int32 exportsMapOffset = BitConverter.ToInt32(span, exportsMapOffsetOffset);
+            Int32 exportsCount = BitConverter.ToInt32(span, HeaderOffSets.exportCountOffset);
+            Int32 exportsMapOffset = BitConverter.ToInt32(span, HeaderOffSets.exportOffsetOffset);
 
             Int32 currentReferenceOffset = exportsMapOffset;
             bool applyOffsetChange = false;
@@ -144,14 +137,14 @@ namespace daum.OffSetter
                     ApplySerialOffsetChange(span, sizeChange, currentReferenceOffset);
                 }
 
-                currentReferenceOffset += exportReferenceSize;
+                currentReferenceOffset += HeaderOffSets.exportDefSize;
                 processedReferences++;
             }
         }
 
         private static RelativeSizeChangeDirection CheckOffsetAffected(byte[] span, Int32 sizeChangeSerialOffset, Int32 referenceOffset)
         {
-            Int32 serialOffset = BitConverter.ToInt32(span, referenceOffset + relativeSerialOffsetOffset);
+            Int32 serialOffset = BitConverter.ToInt32(span, referenceOffset + HeaderOffSets.exportSerialOffsetOffset);
 
             if (serialOffset > sizeChangeSerialOffset) return RelativeSizeChangeDirection.before;
             else if (serialOffset == sizeChangeSerialOffset) return RelativeSizeChangeDirection.here;
@@ -160,12 +153,12 @@ namespace daum.OffSetter
 
         private static void ApplySerialSizeChange(byte[] span, Int32 sizeChange, Int32 referenceOffset)
         {
-            DAUMLib.AddToInt32ByOffset(span, sizeChange, referenceOffset + relativeSerialSizeOffset);
+            DAUMLib.AddToInt32ByOffset(span, sizeChange, referenceOffset + HeaderOffSets.exportSerialSizeOffset);
         }
 
         private static void ApplySerialOffsetChange(byte[] span, Int32 sizeChange, Int32 referenceOffset)
         {
-            DAUMLib.AddToInt32ByOffset(span, sizeChange, referenceOffset + relativeSerialOffsetOffset);
+            DAUMLib.AddToInt32ByOffset(span, sizeChange, referenceOffset + HeaderOffSets.exportSerialOffsetOffset);
         }
 
         private enum RelativeSizeChangeDirection

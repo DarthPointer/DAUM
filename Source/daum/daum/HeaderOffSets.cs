@@ -2,7 +2,7 @@
 
 namespace daum
 {
-    static class OffsetConstants
+    public static class HeaderOffSets
     {
         // ----------------------------------------- 
         // NameMap
@@ -33,5 +33,19 @@ namespace daum
 
         public const Int32 exportSerialOffsetOffset = 36;
         public const Int32 exportSerialSizeOffset = 28;
+
+        // -----------------------------------------
+        // Extra 
+        public const Int32 totalHeaderSizeOffset = 24;
+
+        public const Int32 dependsOffsetOffset = 73;
+
+        public const Int32 nameCountOffset2 = 117;
+
+        public const Int32 assetRegistryDataOffsetOffset = 165;
+
+        public const Int32 bulkDataOffsetOffset = 169;
+
+        public const Int32 preloadDependencyOffsetOffset = 189;
     }
 }
