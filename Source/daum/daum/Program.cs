@@ -32,7 +32,8 @@ namespace daum
             { "-f", new LoadFileOperation() },
 
             { "-o", new OffSetterCall() },
-            { "PreloadPatterns", new PreloadPatternsOperation() }
+            { "PreloadPatterns", new PreloadPatternsOperation() },
+            { "ReloadFiles", new ReloadFiles() }
         };
 
         public static RunData runData;
