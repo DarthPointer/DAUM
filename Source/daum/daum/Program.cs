@@ -33,8 +33,11 @@ namespace daum
 
             { "-o", new OffSetterCall() },
             { "PreloadPatterns", new PreloadPatternsOperation() },
-            { "ReloadFiles", new ReloadFiles() }
+            { "ReloadFiles", new ReloadFiles() },
+            { "Revert", new Revert() }
         };
+
+        public const string backupPostfix = ".daum";
 
         public static RunData runData;
         public static Config config;
@@ -248,12 +251,12 @@ namespace daum
 
                         if (useStandardBackup || offSetterCallArgs != "")
                         {
-                            if (File.Exists(runData.uassetFileName + ".daum")) File.Delete(runData.uassetFileName + ".daum");
-                            Directory.Move(runData.uassetFileName, runData.uassetFileName + ".daum");
+                            if (File.Exists(runData.uassetFileName + backupPostfix)) File.Delete(runData.uassetFileName + backupPostfix);
+                            Directory.Move(runData.uassetFileName, runData.uassetFileName + backupPostfix);
                             File.WriteAllBytes(runData.uassetFileName, Program.runData.uasset);
 
-                            if (File.Exists(runData.uexpFileName + ".daum")) File.Delete(runData.uexpFileName + ".daum");
-                            Directory.Move(runData.uexpFileName, runData.uexpFileName + ".daum");
+                            if (File.Exists(runData.uexpFileName + backupPostfix)) File.Delete(runData.uexpFileName + backupPostfix);
+                            Directory.Move(runData.uexpFileName, runData.uexpFileName + backupPostfix);
                             File.WriteAllBytes(runData.uexpFileName, Program.runData.uexp);
                         }
 
