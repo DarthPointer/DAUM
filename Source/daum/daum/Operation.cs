@@ -378,8 +378,9 @@ namespace daum
             Int32 _class = GetNameIndex(args).Value;
             Int32 outerIndex = GetImportIndex(Program.runData.uasset, args).Value;
             Int32 name = GetNameIndex(args).Value;
+            Int32 nameAug = Int32.Parse(args.TakeArg());
 
-            Program.runData.uasset = Insert(Program.runData.uasset, MakeImportDef(package, _class, outerIndex, name), addAtOffset);
+            Program.runData.uasset = Insert(Program.runData.uasset, MakeImportDef(package, _class, outerIndex, name, nameAug), addAtOffset);
 
             Int32 newImportMapCount = Program.runData.importMap.Length + 1;
             Array.Resize(ref Program.runData.importMap, newImportMapCount);
@@ -388,7 +389,7 @@ namespace daum
                 packageName = new Program.NameEntry(package, 0),
                 className = new Program.NameEntry(_class, 0),
                 outerIndex = outerIndex,
-                importName = new Program.NameEntry(name, 0)
+                importName = new Program.NameEntry(name, nameAug)
             };
 
             return $"-i {HeaderOffsets.importDefSize} 1";
@@ -402,18 +403,19 @@ namespace daum
             Int32? _class = GetNameIndex(args);
             Int32? outerIndex = GetImportIndex(Program.runData.uasset, args);
             Int32? name = GetNameIndex(args);
+            Int32? nameAug = GetOptionalInt(args);
 
             Int32 replacementIndex = (replaceAtOffset - BitConverter.ToInt32(Program.runData.uasset, HeaderOffsets.importOffsetOffset)) / HeaderOffsets.importDefSize;
 
             if (package != null)
             {
                 DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, package.Value, replaceAtOffset + HeaderOffsets.importPackageOffset);
-                Program.runData.importMap[replacementIndex].packageName = new Program.NameEntry(package.Value, 0);
+                Program.runData.importMap[replacementIndex].packageName.nameIndex = package.Value;
             }
             if (_class != null)
             {
                 DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, _class.Value, replaceAtOffset + HeaderOffsets.importClassOffset);
-                Program.runData.importMap[replacementIndex].className = new Program.NameEntry(_class.Value, 0);
+                Program.runData.importMap[replacementIndex].className.nameIndex = _class.Value;
             }
             if (outerIndex != null)
             {
@@ -422,12 +424,31 @@ namespace daum
             }
             if (name != null)
             {
-                Program.runData.importMap[replacementIndex].importName = new Program.NameEntry(name.Value, 0);
+                Program.runData.importMap[replacementIndex].importName.nameIndex = name.Value;
                 DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, name.Value, replaceAtOffset + HeaderOffsets.importNameOffset);
+            }
+            if (nameAug != null)
+            {
+                Program.runData.importMap[replacementIndex].importName.nameAug = nameAug.Value;
+                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, nameAug.Value, replaceAtOffset + HeaderOffsets.importNameOffset + 4);
             }
 
 
             return "";
+        }
+
+        private static Int32? GetOptionalInt(List<string> args)
+        {
+            string arg0 = args.TakeArg();
+
+            if (arg0 == "-s")
+            {
+                return null;
+            }
+            else
+            {
+                return Int32.Parse(arg0);
+            }
         }
 
         protected override Int32? FindByName(List<string> args, int mapOffset, int mapRecordsCount)
@@ -469,7 +490,7 @@ namespace daum
             return null;
         }
 
-        private static byte[] MakeImportDef(Int32 package, Int32 _class, Int32 outerIndex, Int32 name)
+        private static byte[] MakeImportDef(Int32 package, Int32 _class, Int32 outerIndex, Int32 name, Int32 nameAug)
         {
             byte[] result = new byte[HeaderOffsets.importDefSize];
 
@@ -477,6 +498,7 @@ namespace daum
             DAUMLib.WriteInt32IntoOffset(result, _class, HeaderOffsets.importClassOffset);
             DAUMLib.WriteInt32IntoOffset(result, outerIndex, HeaderOffsets.importOuterIndexOffset);
             DAUMLib.WriteInt32IntoOffset(result, name, HeaderOffsets.importNameOffset);
+            DAUMLib.WriteInt32IntoOffset(result, nameAug, HeaderOffsets.importNameOffset + 4);
 
             return result;
         }

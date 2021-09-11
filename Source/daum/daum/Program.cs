@@ -35,6 +35,9 @@ namespace daum
 
             { "-f", new LoadFileOperation() },
 
+            { "OutRedir", new OutRedir() },
+            { "OutRestore", new OutRestore() },
+
             { "-o", new OffSetterCall() },
             { "PreloadPatterns", new PreloadPatternsOperation() },
             { "ReloadFiles", new ReloadFiles() },
@@ -487,6 +490,8 @@ namespace daum
             public bool recordCommands = false;
             public string commandsRecordingFileName = "";
             public StreamWriter commandsRecordingFile = null;
+
+            public TextWriter ConsoleStdOut = Console.Out;
         }
 
         [JsonObject]
