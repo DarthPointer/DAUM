@@ -102,32 +102,34 @@ namespace daum
 
         protected static Int32? GetImportIndex(byte[] uasset, List<string> args)
         {
-            string arg0 = args.TakeArg();
-
-            if (arg0 == byIndexKey)
+            if (args[0] == byIndexKey)
             {
+                args.TakeArg();
                 return Int32.Parse(args.TakeArg());
             }
-            else if (arg0 == "-s")
+            else if (args[0] == "-s")
             {
+                args.TakeArg();
                 return null;
             }
             else
             {
-                return (Int32)FindImportIndex(uasset, arg0);
+                return (Int32)FindImportIndex(uasset, args);
             }
         }
 
-        protected static Int32? FindImportIndex(byte[] uasset, string name)
+        protected static Int32? FindImportIndex(byte[] uasset, List<string> args)
         {
-            Int32 nameIndex = (Int32)FindNameIndex(name);
+            Int32 nameIndex = (Int32)FindNameIndex(args.TakeArg());
+            Int32 nameAug = Int32.Parse(args.TakeArg());
 
             Int32 currentImportOffset = BitConverter.ToInt32(uasset, HeaderOffsets.importOffsetOffset);
 
             for (int processedRecords = 0; processedRecords < BitConverter.ToInt32(uasset, HeaderOffsets.importCountOffset); processedRecords++)
             {
                 Int32 recordNameIndex = NameIndexFromImportDef(uasset, currentImportOffset);
-                if (recordNameIndex == nameIndex)
+                Int32 redordNameAug = BitConverter.ToInt32(uasset, currentImportOffset + HeaderOffsets.importNameOffset + 4);
+                if (recordNameIndex == nameIndex && redordNameAug == nameAug)
                 {
                     return -1 * processedRecords - 1;
                 }
