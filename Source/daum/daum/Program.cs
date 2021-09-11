@@ -490,7 +490,6 @@ namespace daum
         [JsonObject]
         public class Config
         {
-            public string offsetterPath = "";
             public string drgParserPath = "";
             public bool autoParseAfterSuccess = false;
 
