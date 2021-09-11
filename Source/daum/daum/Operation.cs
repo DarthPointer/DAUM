@@ -482,17 +482,17 @@ namespace daum
 
     public class ExportDefOperation : MapOperation
     {
-        private static Int32 relativeClassOffset = 0;
-        private static Int32 relativeSuperOffset = 4;
-        private static Int32 relativeTemlateOffset = 8;
-        private static Int32 relativeOuterOffset = 12;
+        private static Int32 relativeClassOffset = HeaderOffsets.exportClassOffset;
+        private static Int32 relativeSuperOffset = HeaderOffsets.exportSuperOffset;
+        private static Int32 relativeTemlateOffset = HeaderOffsets.exportTemplateOffset;
+        private static Int32 relativeOuterOffset = HeaderOffsets.exportTemplateOffset;
         private static Int32 relativeObjectNameOffset = HeaderOffsets.exportNameOffset;
-        private static Int32 relativeObjectFlagsOffset = 24;
+        private static Int32 relativeObjectFlagsOffset = HeaderOffsets.exportObjectFlagsOffset;
         private static Int32 relativeSerialSizeOffset = HeaderOffsets.exportSerialSizeOffset;
         private static Int32 relativeSerialOffsetOffset = HeaderOffsets.exportSerialOffsetOffset;
-        private static Int32 relativeOtherDataOffset = 44;
+        private static Int32 relativeOtherDataOffset = HeaderOffsets.exportOtherDataOffset;
 
-        private static int otherDataInt32Count = 15;
+        private static int otherDataInt32Count = HeaderOffsets.exportOtherDataInt32Count;
         private static Int32 exportDefinitionSize = HeaderOffsets.exportDefSize;
 
         protected override int nextBlockOffsetOffset => dependsOffsetOffset;

@@ -28,11 +28,21 @@ namespace daum
         public const Int32 exportOffsetOffset = 61;
         public const Int32 exportCountOffset = 57;
 
+        public const Int32 exportClassOffset = 0;
+        public const Int32 exportSuperOffset = 4;
+        public const Int32 exportTemplateOffset = 8;
+        public const Int32 exportOuterOffset = 12;
         public const Int32 exportNameOffset = 16;
-        public const Int32 exportDefSize = 104;
-
-        public const Int32 exportSerialOffsetOffset = 36;
+        public const Int32 exportObjectFlagsOffset = 24;
         public const Int32 exportSerialSizeOffset = 28;
+        public const Int32 exportSerialOffsetOffset = 36;
+
+        public const Int32 exportOtherDataOffset = 44;
+        public const int exportOtherDataInt32Count = 15;
+
+        public const Int32 exportDefSize = 104;
+        
+        
 
         // -----------------------------------------
         // Extra 

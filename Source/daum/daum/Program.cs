@@ -30,6 +30,7 @@ namespace daum
 
             { "ReadNames", new ReadNames() },
             { "ReadImports", new ReadImports() },
+            { "ReadExports", new ReadExports() },
             { "-eread", new ExportReadOperation() },
 
             { "-f", new LoadFileOperation() },
