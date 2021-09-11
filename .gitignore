@@ -1,2 +1,3 @@
 *.zip
 Downloadables/DAUM/Config.json
+Source/daum/.vs/*
