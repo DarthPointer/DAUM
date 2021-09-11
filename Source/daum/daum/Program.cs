@@ -29,6 +29,7 @@ namespace daum
             { "-echange", new ExportChangeOperation() },
 
             { "ReadNames", new ReadNames() },
+            { "ReadImports", new ReadImports() },
             { "-eread", new ExportReadOperation() },
 
             { "-f", new LoadFileOperation() },
@@ -459,10 +460,10 @@ namespace daum
         {
             return new ImportData()
             {
-                packageName = BitConverter.ToInt32(uasset, offset + HeaderOffsets.importPackageOffset),
-                className = BitConverter.ToInt32(uasset, offset + HeaderOffsets.importClassOffset),
+                packageName = new NameEntry(BitConverter.ToInt32(uasset, offset + HeaderOffsets.importPackageOffset), BitConverter.ToInt32(uasset, offset + HeaderOffsets.importPackageOffset + 4)),
+                className = new NameEntry(BitConverter.ToInt32(uasset, offset + HeaderOffsets.importClassOffset), BitConverter.ToInt32(uasset, offset + HeaderOffsets.importClassOffset + 4)),
                 outerIndex = BitConverter.ToInt32(uasset, offset + HeaderOffsets.importOuterIndexOffset),
-                importName = BitConverter.ToInt32(uasset, offset + HeaderOffsets.importNameOffset)
+                importName = new NameEntry(BitConverter.ToInt32(uasset, offset + HeaderOffsets.importNameOffset), BitConverter.ToInt32(uasset, offset + HeaderOffsets.importNameOffset + 4))
             };
         }
 
@@ -496,12 +497,46 @@ namespace daum
             public bool enablePatternReadingHeuristica = false;
         }
 
-        public record ImportData
+        public class NameEntry
         {
-            public Int32 packageName;
-            public Int32 className;
+            public NameEntry(Int32 nameIndex, Int32 nameAug)
+            {
+                this.nameIndex = nameIndex;
+                this.nameAug = nameAug;
+            }
+
+            public Int32 nameIndex;
+            public Int32 nameAug;
+
+            public override string ToString()
+            {
+                return $"{Program.runData.nameMap[nameIndex]} : {nameAug}";
+            }
+        }
+
+        public class ImportData
+        {
+            public NameEntry packageName;
+            public NameEntry className;
             public Int32 outerIndex;
-            public Int32 importName;
+            public NameEntry importName;
+
+            public string PackageString => packageName.ToString();
+            public string ClassString => className.ToString();
+            public string OuterString => GetImportObjectNameString(outerIndex); 
+            public string ObjectNameString => importName.ToString();
+
+            private string GetImportObjectNameString(Int32 importIndex)
+            {
+                if (importIndex == 0)
+                {
+                    return "null";
+                }
+                else
+                {
+                    return Program.runData.importMap[-importIndex - 1].ObjectNameString;
+                }
+            }
         }
 
         public static class PatternFolders

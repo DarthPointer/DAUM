@@ -173,14 +173,14 @@ namespace daum
             return valueStr;
         }
 
-        private static string ImportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 importIndex)
+        public static string ImportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 importIndex)
         {
             importIndex = -1 * importIndex - 1;
             Int32 firstImportOffset = BitConverter.ToInt32(uasset, HeaderOffsets.importOffsetOffset);
             return ExportParsingMachine.FullNameString(uasset, firstImportOffset + importIndex * HeaderOffsets.importDefSize + HeaderOffsets.importNameOffset);
         }
 
-        private static string ExportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 exportIndex)
+        public static string ExportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 exportIndex)
         {
             exportIndex = exportIndex - 1;
             Int32 firstExportOffset = BitConverter.ToInt32(uasset, HeaderOffsets.exportOffsetOffset);

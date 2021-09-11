@@ -383,10 +383,10 @@ namespace daum
             Array.Resize(ref Program.runData.importMap, newImportMapCount);
             Program.runData.importMap[newImportMapCount - 1] = new Program.ImportData()
             {
-                packageName = package,
-                className = _class,
+                packageName = new Program.NameEntry(package, 0),
+                className = new Program.NameEntry(_class, 0),
                 outerIndex = outerIndex,
-                importName = name
+                importName = new Program.NameEntry(name, 0)
             };
 
             return $"-i {HeaderOffsets.importDefSize} 1";
@@ -406,12 +406,12 @@ namespace daum
             if (package != null)
             {
                 DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, package.Value, replaceAtOffset + HeaderOffsets.importPackageOffset);
-                Program.runData.importMap[replacementIndex].packageName = package.Value;
+                Program.runData.importMap[replacementIndex].packageName = new Program.NameEntry(package.Value, 0);
             }
             if (_class != null)
             {
                 DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, _class.Value, replaceAtOffset + HeaderOffsets.importClassOffset);
-                Program.runData.importMap[replacementIndex].className = _class.Value;
+                Program.runData.importMap[replacementIndex].className = new Program.NameEntry(_class.Value, 0);
             }
             if (outerIndex != null)
             {
@@ -420,7 +420,7 @@ namespace daum
             }
             if (name != null)
             {
-                Program.runData.importMap[replacementIndex].importName = name.Value;
+                Program.runData.importMap[replacementIndex].importName = new Program.NameEntry(name.Value, 0);
                 DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, name.Value, replaceAtOffset + HeaderOffsets.importNameOffset);
             }
 
