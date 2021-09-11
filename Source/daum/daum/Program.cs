@@ -26,8 +26,10 @@ namespace daum
             { "-i", new ImportDefOperation() },
             { "-edef", new ExportDefOperation() },
 
-            { "-eread", new ExportReadOperation() },
             { "-echange", new ExportChangeOperation() },
+
+            { "ReadNames", new ReadNames() },
+            { "-eread", new ExportReadOperation() },
 
             { "-f", new LoadFileOperation() },
 
