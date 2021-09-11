@@ -422,6 +422,9 @@ namespace daum
             //Epic Games probably like it when you have to fuck your brain with TexProperty having a body prefix which varies in SIZE between types.
             //I don't. I hope the author of that idea got a proper remedy.
 
+            ExportParsingMachine.ReportExportContents("Raw Bytes:");
+            ExportParsingMachine.ReportExportContents(BitConverter.ToString(uexp, readingContext.declaredSizeStartOffset, readingContext.declaredSize));
+
             readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
             ExportParsingMachine.ReportExportContents("Text Property support is postponed. ETA depends on readability of UE shitcode.");
         }

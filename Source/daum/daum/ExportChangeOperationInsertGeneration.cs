@@ -277,6 +277,7 @@ namespace daum
 
         private static byte[] RawBytesFromString(string str)
         {
+            str = str.Replace('-', ' ');
             string[] array = str.Split(' ');
             if (array.Length == 1 && array[0] == "")
             {
