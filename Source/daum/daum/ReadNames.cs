@@ -30,5 +30,10 @@ namespace daum
         {
             ReportElementContents(Program.runData.nameMap[currentNameIndex++]);
         }
+
+        public static void Read()
+        {
+            new ReadNames().ReadMap();
+        }
     }
 }

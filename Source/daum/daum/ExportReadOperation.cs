@@ -62,6 +62,13 @@ namespace daum
 
             Int32 exportIndex = GetExportIndex(Program.runData.uasset, args).Value;
 
+            ReadExport(exportIndex);
+
+            return "";
+        }
+
+        public void ReadExport(Int32 exportIndex)
+        {
             Int32 fisrtExportOffset = BitConverter.ToInt32(Program.runData.uasset, HeaderOffsets.exportOffsetOffset);
             Int32 uexpStructureOffset = BitConverter.ToInt32(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1)
                 * HeaderOffsets.exportDefSize + HeaderOffsets.exportSerialOffsetOffset)
@@ -94,8 +101,6 @@ namespace daum
             });
 
             ExportParsingMachine.StepsTilEndOfStruct(Program.runData.uasset, Program.runData.uexp);
-
-            return "";
         }
 
         

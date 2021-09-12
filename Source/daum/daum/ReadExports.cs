@@ -89,5 +89,10 @@ namespace daum
                 return new Program.NameEntry(name, nameAug).ToString();
             }
         }
+
+        public static void Read()
+        {
+            new ReadExports().ReadMap();
+        }
     }
 }

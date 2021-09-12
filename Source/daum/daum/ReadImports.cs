@@ -35,5 +35,10 @@ namespace daum
             ReportElementContents($"Outer: {importData.OuterString}");
             ReportElementContents($"Name: {importData.ObjectNameString}");
         }
+
+        public static void Read()
+        {
+            new ReadImports().ReadMap();
+        }
     }
 }

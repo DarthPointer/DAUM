@@ -32,6 +32,7 @@ namespace daum
             { "ReadImports", new ReadImports() },
             { "ReadExports", new ReadExports() },
             { "-eread", new ExportReadOperation() },
+            { "DParse", new DParse() },
 
             { "-f", new LoadFileOperation() },
 

@@ -24,6 +24,15 @@ namespace daum
 
         public override string ExecuteAndGetOffSetterAgrs(List<string> args, out bool doneSomething, out bool useStandardBackup)
         {
+            ReadMap();
+
+            doneSomething = false;
+            useStandardBackup = false;
+            return "";
+        }
+
+        protected void ReadMap()
+        {
             currentElementNumber = EnumerationStart;
             PrepareForEnumeration();
 
@@ -35,10 +44,6 @@ namespace daum
 
                 currentElementNumber += EnumerationIncrement;
             }
-
-            doneSomething = false;
-            useStandardBackup = false;
-            return "";
         }
     }
 }
