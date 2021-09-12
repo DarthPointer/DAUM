@@ -399,6 +399,8 @@ namespace daum
 
         public static void LoadFile(string uassetFileName)
         {
+            runData.headerOffsets = new HeaderOffsets();
+
             runData.uassetFileName = uassetFileName;
             runData.uexpFileName = uassetFileName.Substring(0, uassetFileName.LastIndexOf('.') + 1) + "uexp";
             runData.fileDir = uassetFileName.Substring(0, uassetFileName.LastIndexOf('\\') + 1);
@@ -406,14 +408,25 @@ namespace daum
             runData.uasset = File.ReadAllBytes(runData.uassetFileName);
             runData.uexp = File.ReadAllBytes(runData.uexpFileName);
 
+            LoadCustomVersion();
+
             LoadNames();
             LoadImports();
         }
 
+        private static void LoadCustomVersion()
+        {
+            int customVersionCount = BitConverter.ToInt32(runData.uasset, runData.headerOffsets.customVersionCountOffset);
+
+            // May be read them if they are needed lol?
+
+            runData.headerOffsets.ApplyCustomVersionSize(customVersionCount * runData.headerOffsets.customVersionElementSize);
+        }
+
         private static void LoadNames()
         {
-            Int32 nameCount = BitConverter.ToInt32(runData.uasset, HeaderOffsets.nameCountOffset);
-            Int32 currentNameOffset = BitConverter.ToInt32(runData.uasset, HeaderOffsets.nameOffsetOffset);
+            Int32 nameCount = BitConverter.ToInt32(runData.uasset, runData.headerOffsets.nameCountOffset);
+            Int32 currentNameOffset = BitConverter.ToInt32(runData.uasset, runData.headerOffsets.nameOffsetOffset);
 
             runData.nameMap = new string[nameCount];
 
@@ -421,7 +434,7 @@ namespace daum
             {
                 runData.nameMap[i] = SizePrefixedStringFromOffsetOffsetAdvance(runData.uasset, ref currentNameOffset);
 
-                currentNameOffset += HeaderOffsets.nameHashesSize;
+                currentNameOffset += runData.headerOffsets.nameHashesSize;
             }
         }
 
@@ -448,8 +461,8 @@ namespace daum
 
         private static void LoadImports()
         {
-            Int32 importCount = BitConverter.ToInt32(runData.uasset, HeaderOffsets.importCountOffset);
-            Int32 currentImportOffset = BitConverter.ToInt32(runData.uasset, HeaderOffsets.importOffsetOffset);
+            Int32 importCount = BitConverter.ToInt32(runData.uasset, runData.headerOffsets.importCountOffset);
+            Int32 currentImportOffset = BitConverter.ToInt32(runData.uasset, runData.headerOffsets.importOffsetOffset);
 
             runData.importMap = new ImportData[importCount];
 
@@ -457,7 +470,7 @@ namespace daum
             {
                 runData.importMap[i] = GetImportDataFromOffset(runData.uasset, currentImportOffset);
 
-                currentImportOffset += HeaderOffsets.importDefSize;
+                currentImportOffset += runData.headerOffsets.importDefSize;
             }
         }
 
@@ -465,10 +478,10 @@ namespace daum
         {
             return new ImportData()
             {
-                packageName = new NameEntry(BitConverter.ToInt32(uasset, offset + HeaderOffsets.importPackageOffset), BitConverter.ToInt32(uasset, offset + HeaderOffsets.importPackageOffset + 4)),
-                className = new NameEntry(BitConverter.ToInt32(uasset, offset + HeaderOffsets.importClassOffset), BitConverter.ToInt32(uasset, offset + HeaderOffsets.importClassOffset + 4)),
-                outerIndex = BitConverter.ToInt32(uasset, offset + HeaderOffsets.importOuterIndexOffset),
-                importName = new NameEntry(BitConverter.ToInt32(uasset, offset + HeaderOffsets.importNameOffset), BitConverter.ToInt32(uasset, offset + HeaderOffsets.importNameOffset + 4))
+                packageName = new NameEntry(BitConverter.ToInt32(uasset, offset + runData.headerOffsets.importPackageOffset), BitConverter.ToInt32(uasset, offset + runData.headerOffsets.importPackageOffset + 4)),
+                className = new NameEntry(BitConverter.ToInt32(uasset, offset + runData.headerOffsets.importClassOffset), BitConverter.ToInt32(uasset, offset + runData.headerOffsets.importClassOffset + 4)),
+                outerIndex = BitConverter.ToInt32(uasset, offset + runData.headerOffsets.importOuterIndexOffset),
+                importName = new NameEntry(BitConverter.ToInt32(uasset, offset + runData.headerOffsets.importNameOffset), BitConverter.ToInt32(uasset, offset + runData.headerOffsets.importNameOffset + 4))
             };
         }
 
@@ -493,6 +506,8 @@ namespace daum
             public StreamWriter commandsRecordingFile = null;
 
             public TextWriter ConsoleStdOut = Console.Out;
+
+            public HeaderOffsets headerOffsets;
         }
 
         [JsonObject]

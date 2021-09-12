@@ -55,7 +55,7 @@ namespace daum
             Console.WriteLine("--------------------");
             Console.WriteLine("Exports");
 
-            Int32 exportCount = BitConverter.ToInt32(Program.runData.uasset, HeaderOffsets.exportCountOffset);
+            Int32 exportCount = BitConverter.ToInt32(Program.runData.uasset, Program.runData.headerOffsets.exportCountOffset);
             ExportReadOperation exportReadOperation = new ExportReadOperation();
 
             for (Int32 exportIndex = 1; exportIndex < exportCount + 1; exportIndex++)

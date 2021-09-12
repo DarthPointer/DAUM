@@ -69,16 +69,16 @@ namespace daum
 
         public void ReadExport(Int32 exportIndex)
         {
-            Int32 fisrtExportOffset = BitConverter.ToInt32(Program.runData.uasset, HeaderOffsets.exportOffsetOffset);
+            Int32 fisrtExportOffset = BitConverter.ToInt32(Program.runData.uasset, Program.runData.headerOffsets.exportOffsetOffset);
             Int32 uexpStructureOffset = BitConverter.ToInt32(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1)
-                * HeaderOffsets.exportDefSize + HeaderOffsets.exportSerialOffsetOffset)
-                - BitConverter.ToInt32(Program.runData.uasset, headerSizeOffset);
+                * Program.runData.headerOffsets.exportDefSize + Program.runData.headerOffsets.exportSerialOffsetOffset)
+                - BitConverter.ToInt32(Program.runData.uasset, Program.runData.headerOffsets.totalHeaderSizeOffset);
 
             Int32 uexpStructureSize = BitConverter.ToInt32(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) *
-                HeaderOffsets.exportDefSize + HeaderOffsets.exportSerialSizeOffset);
+                Program.runData.headerOffsets.exportDefSize + Program.runData.headerOffsets.exportSerialSizeOffset);
 
             string exportObjectName = ExportParsingMachine.FullNameString(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) *
-                HeaderOffsets.exportDefSize + HeaderOffsets.exportNameOffset);
+                Program.runData.headerOffsets.exportDefSize + Program.runData.headerOffsets.exportNameOffset);
 
             Console.WriteLine("--------------------");
             Console.WriteLine($"Export Index: {exportIndex}");

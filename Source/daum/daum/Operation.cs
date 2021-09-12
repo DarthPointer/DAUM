@@ -9,10 +9,6 @@ namespace daum
         protected static string byIndexKey = "-i";
         protected static string indexOfExportKey = "-e";
 
-        protected static Int32 dependsOffsetOffset = 73;
-
-        protected static Int32 headerSizeOffset = 24;
-
         public abstract string ExecuteAndGetOffSetterAgrs(List<string> args, out bool doneSomething, out bool useStandardBackup);
 
         protected static byte[] Insert(byte[] target, byte[] insert, Int32 offset)
@@ -85,13 +81,13 @@ namespace daum
         {
             index = -1 * index - 1;
 
-            if (index < BitConverter.ToInt32(uasset, HeaderOffsets.importCountOffset))
+            if (index < BitConverter.ToInt32(uasset, Program.runData.headerOffsets.importCountOffset))
             {
-                Int32 currentImportOffset = BitConverter.ToInt32(uasset, HeaderOffsets.importOffsetOffset);
+                Int32 currentImportOffset = BitConverter.ToInt32(uasset, Program.runData.headerOffsets.importOffsetOffset);
 
                 for (Int32 currentIndex = 0; currentIndex < index; currentIndex++)
                 {
-                    currentImportOffset += HeaderOffsets.importDefSize;
+                    currentImportOffset += Program.runData.headerOffsets.importDefSize;
                 }
 
                 return currentImportOffset;
@@ -123,18 +119,18 @@ namespace daum
             Int32 nameIndex = (Int32)FindNameIndex(args.TakeArg());
             Int32 nameAug = Int32.Parse(args.TakeArg());
 
-            Int32 currentImportOffset = BitConverter.ToInt32(uasset, HeaderOffsets.importOffsetOffset);
+            Int32 currentImportOffset = BitConverter.ToInt32(uasset, Program.runData.headerOffsets.importOffsetOffset);
 
-            for (int processedRecords = 0; processedRecords < BitConverter.ToInt32(uasset, HeaderOffsets.importCountOffset); processedRecords++)
+            for (int processedRecords = 0; processedRecords < BitConverter.ToInt32(uasset, Program.runData.headerOffsets.importCountOffset); processedRecords++)
             {
                 Int32 recordNameIndex = NameIndexFromImportDef(uasset, currentImportOffset);
-                Int32 redordNameAug = BitConverter.ToInt32(uasset, currentImportOffset + HeaderOffsets.importNameOffset + 4);
+                Int32 redordNameAug = BitConverter.ToInt32(uasset, currentImportOffset + Program.runData.headerOffsets.importNameOffset + 4);
                 if (recordNameIndex == nameIndex && redordNameAug == nameAug)
                 {
                     return -1 * processedRecords - 1;
                 }
 
-                currentImportOffset += HeaderOffsets.importDefSize;
+                currentImportOffset += Program.runData.headerOffsets.importDefSize;
             }
 
             return null;
@@ -142,20 +138,20 @@ namespace daum
 
         protected static Int32 NameIndexFromImportDef(byte[] uasset, Int32 offset)
         {
-            return BitConverter.ToInt32(uasset, offset + HeaderOffsets.importNameOffset);
+            return BitConverter.ToInt32(uasset, offset + Program.runData.headerOffsets.importNameOffset);
         }
 
         protected static Int32? FindExportDefOffset(byte[] uasset, Int32 index)
         {
             index -= 1;
 
-            if (index < BitConverter.ToInt32(uasset, HeaderOffsets.exportCountOffset))
+            if (index < BitConverter.ToInt32(uasset, Program.runData.headerOffsets.exportCountOffset))
             {
-                Int32 currentExportDefOffset = BitConverter.ToInt32(uasset, HeaderOffsets.exportOffsetOffset);
+                Int32 currentExportDefOffset = BitConverter.ToInt32(uasset, Program.runData.headerOffsets.exportOffsetOffset);
 
                 for (Int32 currentIndex = 0; currentIndex < index; currentIndex++)
                 {
-                    currentExportDefOffset += HeaderOffsets.exportDefSize;
+                    currentExportDefOffset += Program.runData.headerOffsets.exportDefSize;
                 }
 
                 return currentExportDefOffset;
@@ -183,17 +179,17 @@ namespace daum
             Int32 nameIndex = FindNameIndex(name).Value;
 
             Int32 currentExportDefIndex = 1;
-            Int32 currentExportDefOffset = BitConverter.ToInt32(uasset, HeaderOffsets.exportOffsetOffset);
-            for (int processedRecords = 0; processedRecords < BitConverter.ToInt32(uasset, HeaderOffsets.exportCountOffset); processedRecords++)
+            Int32 currentExportDefOffset = BitConverter.ToInt32(uasset, Program.runData.headerOffsets.exportOffsetOffset);
+            for (int processedRecords = 0; processedRecords < BitConverter.ToInt32(uasset, Program.runData.headerOffsets.exportCountOffset); processedRecords++)
             {
-                if (BitConverter.ToInt32(uasset, currentExportDefOffset + HeaderOffsets.exportNameOffset) == nameIndex &&
-                    BitConverter.ToInt32(uasset, currentExportDefOffset + HeaderOffsets.exportNameOffset + 4) == nameAug)
+                if (BitConverter.ToInt32(uasset, currentExportDefOffset + Program.runData.headerOffsets.exportNameOffset) == nameIndex &&
+                    BitConverter.ToInt32(uasset, currentExportDefOffset + Program.runData.headerOffsets.exportNameOffset + 4) == nameAug)
                 {
                     return currentExportDefIndex;
                 }
 
                 currentExportDefIndex++;
-                currentExportDefOffset += HeaderOffsets.exportDefSize;
+                currentExportDefOffset += Program.runData.headerOffsets.exportDefSize;
             }
 
             return null;
@@ -201,7 +197,7 @@ namespace daum
 
         protected static Int32 NameIndexFromExportDef(byte[] uasset, Int32 offset)
         {
-            return BitConverter.ToInt32(uasset, offset + HeaderOffsets.exportNameOffset);
+            return BitConverter.ToInt32(uasset, offset + Program.runData.headerOffsets.exportNameOffset);
         }
 
         protected static Int32? GetImportExportIndex(byte[] uasset, List<string> args)
@@ -279,9 +275,9 @@ namespace daum
 
     public class NameDefOperation : MapOperation
     {
-        protected override Int32 nextBlockOffsetOffset => HeaderOffsets.importOffsetOffset;
-        protected override Int32 thisBlockOffsetOffset => HeaderOffsets.nameOffsetOffset;
-        protected override Int32 thisBlockRecordCountOffset => HeaderOffsets.nameCountOffset;
+        protected override Int32 nextBlockOffsetOffset => Program.runData.headerOffsets.importOffsetOffset;
+        protected override Int32 thisBlockOffsetOffset => Program.runData.headerOffsets.nameOffsetOffset;
+        protected override Int32 thisBlockRecordCountOffset => Program.runData.headerOffsets.nameCountOffset;
 
         protected override string AddOperation(List<string> args, Int32 addAtOffset, out bool useStandardBackup)
         {
@@ -354,7 +350,7 @@ namespace daum
 
         private static byte[] MakeNameDef(string name)
         {
-            byte[] result = new byte[HeaderOffsets.nameHashesSize + HeaderOffsets.stringSizeDesignationSize + 1];
+            byte[] result = new byte[Program.runData.headerOffsets.nameHashesSize + Program.runData.headerOffsets.stringSizeDesignationSize + 1];
             result = Insert(result, StringToBytes(name), 4);
 
             DAUMLib.WriteInt32IntoOffset(result, name.Length + 1, 0);
@@ -365,10 +361,10 @@ namespace daum
 
     public class ImportDefOperation : MapOperation
     {
-        protected override Int32 nextBlockOffsetOffset => HeaderOffsets.exportOffsetOffset;
+        protected override Int32 nextBlockOffsetOffset => Program.runData.headerOffsets.exportOffsetOffset;
 
-        protected override Int32 thisBlockOffsetOffset => HeaderOffsets.importOffsetOffset;
-        protected override Int32 thisBlockRecordCountOffset => HeaderOffsets.importCountOffset;
+        protected override Int32 thisBlockOffsetOffset => Program.runData.headerOffsets.importOffsetOffset;
+        protected override Int32 thisBlockRecordCountOffset => Program.runData.headerOffsets.importCountOffset;
 
         protected override string AddOperation(List<string> args, int addAtOffset, out bool useStandardBackup)
         {
@@ -392,7 +388,7 @@ namespace daum
                 importName = new Program.NameEntry(name, nameAug)
             };
 
-            return $"-i {HeaderOffsets.importDefSize} 1";
+            return $"-i {Program.runData.headerOffsets.importDefSize} 1";
         }
 
         protected override string ReplaceOperation(List<string> args, int replaceAtOffset, out bool useStandardBackup)
@@ -405,32 +401,32 @@ namespace daum
             Int32? name = GetNameIndex(args);
             Int32? nameAug = GetOptionalInt(args);
 
-            Int32 replacementIndex = (replaceAtOffset - BitConverter.ToInt32(Program.runData.uasset, HeaderOffsets.importOffsetOffset)) / HeaderOffsets.importDefSize;
+            Int32 replacementIndex = (replaceAtOffset - BitConverter.ToInt32(Program.runData.uasset, Program.runData.headerOffsets.importOffsetOffset)) / Program.runData.headerOffsets.importDefSize;
 
             if (package != null)
             {
-                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, package.Value, replaceAtOffset + HeaderOffsets.importPackageOffset);
+                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, package.Value, replaceAtOffset + Program.runData.headerOffsets.importPackageOffset);
                 Program.runData.importMap[replacementIndex].packageName.nameIndex = package.Value;
             }
             if (_class != null)
             {
-                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, _class.Value, replaceAtOffset + HeaderOffsets.importClassOffset);
+                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, _class.Value, replaceAtOffset + Program.runData.headerOffsets.importClassOffset);
                 Program.runData.importMap[replacementIndex].className.nameIndex = _class.Value;
             }
             if (outerIndex != null)
             {
-                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, outerIndex.Value, replaceAtOffset + HeaderOffsets.importOuterIndexOffset);
+                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, outerIndex.Value, replaceAtOffset + Program.runData.headerOffsets.importOuterIndexOffset);
                 Program.runData.importMap[replacementIndex].outerIndex = outerIndex.Value;
             }
             if (name != null)
             {
                 Program.runData.importMap[replacementIndex].importName.nameIndex = name.Value;
-                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, name.Value, replaceAtOffset + HeaderOffsets.importNameOffset);
+                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, name.Value, replaceAtOffset + Program.runData.headerOffsets.importNameOffset);
             }
             if (nameAug != null)
             {
                 Program.runData.importMap[replacementIndex].importName.nameAug = nameAug.Value;
-                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, nameAug.Value, replaceAtOffset + HeaderOffsets.importNameOffset + 4);
+                DAUMLib.WriteInt32IntoOffset(Program.runData.uasset, nameAug.Value, replaceAtOffset + Program.runData.headerOffsets.importNameOffset + 4);
             }
 
 
@@ -465,7 +461,7 @@ namespace daum
                     return currentImportOffset;
                 }
 
-                currentImportOffset += HeaderOffsets.importDefSize;
+                currentImportOffset += Program.runData.headerOffsets.importDefSize;
             }
 
             return null;
@@ -481,7 +477,7 @@ namespace daum
 
                 for (Int32 currentIndex = 0; currentIndex < index; currentIndex++)
                 {
-                    currentNameOffset += HeaderOffsets.importDefSize;
+                    currentNameOffset += Program.runData.headerOffsets.importDefSize;
                 }
 
                 return currentNameOffset;
@@ -492,13 +488,13 @@ namespace daum
 
         private static byte[] MakeImportDef(Int32 package, Int32 _class, Int32 outerIndex, Int32 name, Int32 nameAug)
         {
-            byte[] result = new byte[HeaderOffsets.importDefSize];
+            byte[] result = new byte[Program.runData.headerOffsets.importDefSize];
 
-            DAUMLib.WriteInt32IntoOffset(result, package, HeaderOffsets.importPackageOffset);
-            DAUMLib.WriteInt32IntoOffset(result, _class, HeaderOffsets.importClassOffset);
-            DAUMLib.WriteInt32IntoOffset(result, outerIndex, HeaderOffsets.importOuterIndexOffset);
-            DAUMLib.WriteInt32IntoOffset(result, name, HeaderOffsets.importNameOffset);
-            DAUMLib.WriteInt32IntoOffset(result, nameAug, HeaderOffsets.importNameOffset + 4);
+            DAUMLib.WriteInt32IntoOffset(result, package, Program.runData.headerOffsets.importPackageOffset);
+            DAUMLib.WriteInt32IntoOffset(result, _class, Program.runData.headerOffsets.importClassOffset);
+            DAUMLib.WriteInt32IntoOffset(result, outerIndex, Program.runData.headerOffsets.importOuterIndexOffset);
+            DAUMLib.WriteInt32IntoOffset(result, name, Program.runData.headerOffsets.importNameOffset);
+            DAUMLib.WriteInt32IntoOffset(result, nameAug, Program.runData.headerOffsets.importNameOffset + 4);
 
             return result;
         }
@@ -506,23 +502,23 @@ namespace daum
 
     public class ExportDefOperation : MapOperation
     {
-        private static Int32 relativeClassOffset = HeaderOffsets.exportClassOffset;
-        private static Int32 relativeSuperOffset = HeaderOffsets.exportSuperOffset;
-        private static Int32 relativeTemlateOffset = HeaderOffsets.exportTemplateOffset;
-        private static Int32 relativeOuterOffset = HeaderOffsets.exportTemplateOffset;
-        private static Int32 relativeObjectNameOffset = HeaderOffsets.exportNameOffset;
-        private static Int32 relativeObjectFlagsOffset = HeaderOffsets.exportObjectFlagsOffset;
-        private static Int32 relativeSerialSizeOffset = HeaderOffsets.exportSerialSizeOffset;
-        private static Int32 relativeSerialOffsetOffset = HeaderOffsets.exportSerialOffsetOffset;
-        private static Int32 relativeOtherDataOffset = HeaderOffsets.exportOtherDataOffset;
+        private static Int32 relativeClassOffset = Program.runData.headerOffsets.exportClassOffset;
+        private static Int32 relativeSuperOffset = Program.runData.headerOffsets.exportSuperOffset;
+        private static Int32 relativeTemlateOffset = Program.runData.headerOffsets.exportTemplateOffset;
+        private static Int32 relativeOuterOffset = Program.runData.headerOffsets.exportTemplateOffset;
+        private static Int32 relativeObjectNameOffset = Program.runData.headerOffsets.exportNameOffset;
+        private static Int32 relativeObjectFlagsOffset = Program.runData.headerOffsets.exportObjectFlagsOffset;
+        private static Int32 relativeSerialSizeOffset = Program.runData.headerOffsets.exportSerialSizeOffset;
+        private static Int32 relativeSerialOffsetOffset = Program.runData.headerOffsets.exportSerialOffsetOffset;
+        private static Int32 relativeOtherDataOffset = Program.runData.headerOffsets.exportOtherDataOffset;
 
-        private static int otherDataInt32Count = HeaderOffsets.exportOtherDataInt32Count;
-        private static Int32 exportDefinitionSize = HeaderOffsets.exportDefSize;
+        private static int otherDataInt32Count = Program.runData.headerOffsets.exportOtherDataInt32Count;
+        private static Int32 exportDefinitionSize = Program.runData.headerOffsets.exportDefSize;
 
-        protected override int nextBlockOffsetOffset => dependsOffsetOffset;
+        protected override int nextBlockOffsetOffset => Program.runData.headerOffsets.dependsOffsetOffset;
 
-        protected override int thisBlockOffsetOffset => HeaderOffsets.exportOffsetOffset;
-        protected override int thisBlockRecordCountOffset => HeaderOffsets.exportCountOffset;
+        protected override int thisBlockOffsetOffset => Program.runData.headerOffsets.exportOffsetOffset;
+        protected override int thisBlockRecordCountOffset => Program.runData.headerOffsets.exportCountOffset;
 
         protected override string AddOperation(List<string> args, int addAtOffset, out bool useStandardBackup)
         {
@@ -536,8 +532,8 @@ namespace daum
             Int32 nameAug = Int32.Parse(args.TakeArg());
             Int32 flags = Int32.Parse(args.TakeArg());
 
-            Int32 serialOffset = BitConverter.ToInt32(Program.runData.uasset, addAtOffset - HeaderOffsets.exportDefSize + relativeSerialOffsetOffset) +
-                BitConverter.ToInt32(Program.runData.uasset, addAtOffset - HeaderOffsets.exportDefSize + relativeSerialSizeOffset);
+            Int32 serialOffset = BitConverter.ToInt32(Program.runData.uasset, addAtOffset - Program.runData.headerOffsets.exportDefSize + relativeSerialOffsetOffset) +
+                BitConverter.ToInt32(Program.runData.uasset, addAtOffset - Program.runData.headerOffsets.exportDefSize + relativeSerialSizeOffset);
             List<Int32> other = new List<int>();
             for (int i = 0; i < otherDataInt32Count; i++)
             {
@@ -549,7 +545,7 @@ namespace daum
             Program.CallOffSetterWithArgs("-edef 104 1");
 
             Int32 newExportSerialOffset = BitConverter.ToInt32(Program.runData.uasset, addAtOffset + relativeSerialOffsetOffset);
-            Int32 newExportFileOffset = newExportSerialOffset - BitConverter.ToInt32(Program.runData.uasset, headerSizeOffset);
+            Int32 newExportFileOffset = newExportSerialOffset - BitConverter.ToInt32(Program.runData.uasset, Program.runData.headerOffsets.totalHeaderSizeOffset);
 
             byte[] stubExport = new byte[12];
             DAUMLib.WriteInt32IntoOffset(stubExport, FindNameIndex("None").Value, 0);
