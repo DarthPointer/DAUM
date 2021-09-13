@@ -44,6 +44,7 @@ namespace daum
 
             { "OutRedir", new OutRedir() },
             { "OutRestore", new OutRestore() },
+            { "ToFile", new ToFile() },
 
             { "-o", new OffSetterCall() },                      // legacy
             { "OffSetter", new OffSetterCall() },
@@ -183,7 +184,7 @@ namespace daum
             }));
         }
 
-        private static bool ProcessCommand(Config config, RunData runData, List<string> command, out bool doneSomething, out bool parsed, out bool commandWasFound)
+        public static bool ProcessCommand(Config config, RunData runData, List<string> command, out bool doneSomething, out bool parsed, out bool commandWasFound)
         {
             parsed = false;
 
