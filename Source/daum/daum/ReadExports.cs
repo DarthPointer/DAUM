@@ -39,7 +39,7 @@ namespace daum
             Int32 name = BitConverter.ToInt32(uasset, currentExportDefOffset + Program.runData.headerOffsets.exportNameOffset);
             Int32 nameAug = BitConverter.ToInt32(uasset, currentExportDefOffset + Program.runData.headerOffsets.exportNameOffset + 4);
             Int32 serialSize = BitConverter.ToInt32(uasset, currentExportDefOffset + Program.runData.headerOffsets.exportSerialSizeOffset);
-            Int32 serialOffset = BitConverter.ToInt32(uasset, currentExportDefOffset + Program.runData.headerOffsets.exportSuperOffset);
+            Int32 serialOffset = BitConverter.ToInt32(uasset, currentExportDefOffset + Program.runData.headerOffsets.exportSerialOffsetOffset);
             Int32 flags = BitConverter.ToInt32(uasset, currentExportDefOffset + Program.runData.headerOffsets.exportObjectFlagsOffset);
 
             Int32[] otherData = new Int32[Program.runData.headerOffsets.exportOtherDataInt32Count];
