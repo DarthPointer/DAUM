@@ -2,7 +2,8 @@
   "profiles": {
     "daum": {
       "commandName": "Project",
-      "commandLineArgs": "D:\\DRGpacker\\U34exp\\FSD\\Content\\UI\\MainOnscreenHUD\\HUD_MutatorsAndWarnings_3.uasset"
+      "commandLineArgs": "D:\\DRGpacker\\UPG_AssaultRifle_ArmorDamage.uasset",
+      "workingDirectory": "D:\\Repos\\DAUM\\Downloadables\\DAUM"
     }
   }
 }

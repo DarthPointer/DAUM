@@ -6,7 +6,7 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 
-using DRGOffSetterLib;
+using daum.OffSetter;
 
 namespace daum
 {
@@ -14,26 +14,46 @@ namespace daum
     {
         private static string configPath;
 
-        private const string exitCommand = "exit";
-        private const string printNullConfigCommand = "nullConfig";
-        private const string parseCommand = "parse";
+        private const string exitCommand = "Exit";
+        private const string printNullConfigCommand = "NullConfig";
+        private const string parseCommand = "Parse";
         private const string fromScriptModeKey = "-s";
         private const string startRecordingCommand = "StartRec";
         private const string stopRecordingCommand = "StopRec";
 
         private static Dictionary<string, Operation> operations = new Dictionary<string, Operation>() {
-            { "-n", new NameDefOperation() },
-            { "-i", new ImportDefOperation() },
-            { "-edef", new ExportDefOperation() },
+            { "-n", new NameDefOperation() },                   // legacy
+            { "Name", new NameDefOperation() },
+            { "-i", new ImportDefOperation() },                 // legacy
+            { "Import", new ImportDefOperation() },
+            { "-edef", new ExportDefOperation() },              // legacy
+            { "ExportDef", new ExportDefOperation() },
 
-            { "-eread", new ExportReadOperation() },
-            { "-echange", new ExportChangeOperation() },
+            { "-echange", new ExportChangeOperation() },        // legacy
+            { "ExportChange", new ExportChangeOperation() },
 
-            { "-f", new LoadFileOperation() },
+            { "ReadNames", new ReadNames() },
+            { "ReadImports", new ReadImports() },
+            { "ReadExports", new ReadExports() },
+            { "-eread", new ExportReadOperation() },            // legacy
+            { "ExportRead", new ExportReadOperation() },
+            { "DParse", new DParse() },
 
-            { "-o", new OffSetterCall() },
-            { "PreloadPatterns", new PreloadPatternsOperation() }
+            { "-f", new LoadFileOperation() },                  // legacy
+            { "File", new LoadFileOperation() },
+
+            { "OutRedir", new OutRedir() },
+            { "OutRestore", new OutRestore() },
+            { "ToFile", new ToFile() },
+
+            { "-o", new OffSetterCall() },                      // legacy
+            { "OffSetter", new OffSetterCall() },
+            { "PreloadPatterns", new PreloadPatternsOperation() },
+            { "ReloadFiles", new ReloadFiles() },
+            { "Revert", new Revert() }
         };
+
+        public const string backupPostfix = ".daum";
 
         public static RunData runData;
         public static Config config;
@@ -68,7 +88,7 @@ namespace daum
                     {
                         List<string> parsedCommand = ParseCommandString(command);
 
-                        ProcessCommand(config, runData, parsedCommand, out bool _, out bool _);
+                        ProcessCommand(config, runData, parsedCommand, out _, out _, out _);
                     }
                     catch (Exception e)
                     {
@@ -91,7 +111,7 @@ namespace daum
 
                 if (argList.Count > 0)
                 {
-                    ProcessCommand(config, runData, argList, out _, out _);
+                    ProcessCommand(config, runData, argList, out _, out _, out _);
                     return;
                 }
 
@@ -109,14 +129,21 @@ namespace daum
                         if (runData.recordCommands && input != stopRecordingCommand) runData.commandsRecordingFile.WriteLine(input);
 
                         List<string> command = ParseCommandString(input);
-                        if (command[0].Length > 0)
+                        if (command.Count > 0)
                         {
-                            runLoop = ProcessCommand(config, runData, command, out bool doneSomething, out bool parsed);
-                            if (doneSomething)
+                            if (command[0].Length > 0)
                             {
-                                if (config.autoParseAfterSuccess && !parsed) ParseFilesWithDRGPareser(config.drgParserPath, runData.uassetFileName);
+                                runLoop = ProcessCommand(config, runData, command, out bool doneSomething, out bool parsed, out bool commandWasFound);
+                                if (doneSomething)
+                                {
+                                    if (config.autoParseAfterSuccess && !parsed) ParseFilesWithDRGPareser(config.drgParserPath, runData.uassetFileName);
 
-                                Console.WriteLine("Done!");
+                                    Console.WriteLine("Done!");
+                                }
+                                if (!commandWasFound)
+                                {
+                                    Console.WriteLine("No valid command found");
+                                }
                             }
                         }
                     }
@@ -157,7 +184,7 @@ namespace daum
             }));
         }
 
-        private static bool ProcessCommand(Config config, RunData runData, List<string> command, out bool doneSomething, out bool parsed)
+        public static bool ProcessCommand(Config config, RunData runData, List<string> command, out bool doneSomething, out bool parsed, out bool commandWasFound)
         {
             parsed = false;
 
@@ -168,6 +195,7 @@ namespace daum
                     if (command[0] == exitCommand)
                     {
                         doneSomething = false;
+                        commandWasFound = true;
                         return false;
                     }
 
@@ -175,6 +203,7 @@ namespace daum
                     {
                         WriteConfig(new Config(), "NullConfig.json");
                         doneSomething = false;
+                        commandWasFound = true;
                         return true;
                     }
 
@@ -183,6 +212,7 @@ namespace daum
                         ParseFilesWithDRGPareser(config.drgParserPath, runData.uassetFileName);
                         parsed = true;
                         doneSomething = false;
+                        commandWasFound = true;
                         return true;
                     }
 
@@ -208,6 +238,7 @@ namespace daum
                         }
 
                         doneSomething = false;
+                        commandWasFound = true;
                         return true;
                     }
 
@@ -219,6 +250,7 @@ namespace daum
                         runData.commandsRecordingFileName = "";
 
                         doneSomething = false;
+                        commandWasFound = true;
                         return true;
                     }
 
@@ -228,30 +260,30 @@ namespace daum
                     {
                         string offSetterCallArgs = operations[operationKey].ExecuteAndGetOffSetterAgrs(command, out doneSomething, out bool useStandardBackup);
 
-                        if (useStandardBackup)
+                        if (offSetterCallArgs != "")
                         {
-                            if (File.Exists(runData.uassetFileName + ".daum")) File.Delete(runData.uassetFileName + ".daum");
-                            Directory.Move(runData.uassetFileName, runData.uassetFileName + ".daum");
+                            CallOffSetterWithArgs(offSetterCallArgs);
+                        }
+
+                        if (useStandardBackup || offSetterCallArgs != "")
+                        {
+                            if (File.Exists(runData.uassetFileName + backupPostfix)) File.Delete(runData.uassetFileName + backupPostfix);
+                            Directory.Move(runData.uassetFileName, runData.uassetFileName + backupPostfix);
                             File.WriteAllBytes(runData.uassetFileName, Program.runData.uasset);
 
-                            if (File.Exists(runData.uexpFileName + ".daum")) File.Delete(runData.uexpFileName + ".daum");
-                            Directory.Move(runData.uexpFileName, runData.uexpFileName + ".daum");
+                            if (File.Exists(runData.uexpFileName + backupPostfix)) File.Delete(runData.uexpFileName + backupPostfix);
+                            Directory.Move(runData.uexpFileName, runData.uexpFileName + backupPostfix);
                             File.WriteAllBytes(runData.uexpFileName, Program.runData.uexp);
                         }
 
-                        if (offSetterCallArgs != "")
-                        {
-                            CallOffSetterWithArgs(offSetterCallArgs + " -m -r");
-                            Program.runData.uasset = File.ReadAllBytes(runData.uassetFileName);
-                        }
-
+                        commandWasFound = true;
                         return true;
                     }
                 }
             }
 
             doneSomething = false;
-
+            commandWasFound = false;
             return true;
         }
 
@@ -281,10 +313,9 @@ namespace daum
             }
         }
 
-        public static void CallOffSetterWithArgs(string offSetterCallArgs, string tgtFile = null)
+        public static void CallOffSetterWithArgs(string offSetterCallArgs)
         {
-            Process offSetter = Process.Start(config.offsetterPath, (tgtFile ?? runData.uassetFileName) + offSetterCallArgs);
-            offSetter.WaitForExit();
+            OffSetterExecution.Execute(offSetterCallArgs);
         }
 
         private static void ParseFilesWithDRGPareser(string parserPath, string uassetFileName)
@@ -376,6 +407,8 @@ namespace daum
 
         public static void LoadFile(string uassetFileName)
         {
+            runData.headerOffsets = new HeaderOffsets();
+
             runData.uassetFileName = uassetFileName;
             runData.uexpFileName = uassetFileName.Substring(0, uassetFileName.LastIndexOf('.') + 1) + "uexp";
             runData.fileDir = uassetFileName.Substring(0, uassetFileName.LastIndexOf('\\') + 1);
@@ -383,14 +416,25 @@ namespace daum
             runData.uasset = File.ReadAllBytes(runData.uassetFileName);
             runData.uexp = File.ReadAllBytes(runData.uexpFileName);
 
+            LoadCustomVersion();
+
             LoadNames();
             LoadImports();
         }
 
+        private static void LoadCustomVersion()
+        {
+            int customVersionCount = BitConverter.ToInt32(runData.uasset, runData.headerOffsets.customVersionCountOffset);
+
+            // May be read them if they are needed lol?
+
+            runData.headerOffsets.ApplyCustomVersionSize(customVersionCount * runData.headerOffsets.customVersionElementSize);
+        }
+
         private static void LoadNames()
         {
-            Int32 nameCount = BitConverter.ToInt32(runData.uasset, OffsetConstants.nameCountOffset);
-            Int32 currentNameOffset = BitConverter.ToInt32(runData.uasset, OffsetConstants.nameOffsetOffset);
+            Int32 nameCount = BitConverter.ToInt32(runData.uasset, runData.headerOffsets.nameCountOffset);
+            Int32 currentNameOffset = BitConverter.ToInt32(runData.uasset, runData.headerOffsets.nameOffsetOffset);
 
             runData.nameMap = new string[nameCount];
 
@@ -398,7 +442,7 @@ namespace daum
             {
                 runData.nameMap[i] = SizePrefixedStringFromOffsetOffsetAdvance(runData.uasset, ref currentNameOffset);
 
-                currentNameOffset += OffsetConstants.nameHashesSize;
+                currentNameOffset += runData.headerOffsets.nameHashesSize;
             }
         }
 
@@ -425,8 +469,8 @@ namespace daum
 
         private static void LoadImports()
         {
-            Int32 importCount = BitConverter.ToInt32(runData.uasset, OffsetConstants.importCountOffset);
-            Int32 currentImportOffset = BitConverter.ToInt32(runData.uasset, OffsetConstants.importOffsetOffset);
+            Int32 importCount = BitConverter.ToInt32(runData.uasset, runData.headerOffsets.importCountOffset);
+            Int32 currentImportOffset = BitConverter.ToInt32(runData.uasset, runData.headerOffsets.importOffsetOffset);
 
             runData.importMap = new ImportData[importCount];
 
@@ -434,7 +478,7 @@ namespace daum
             {
                 runData.importMap[i] = GetImportDataFromOffset(runData.uasset, currentImportOffset);
 
-                currentImportOffset += OffsetConstants.importDefSize;
+                currentImportOffset += runData.headerOffsets.importDefSize;
             }
         }
 
@@ -442,10 +486,10 @@ namespace daum
         {
             return new ImportData()
             {
-                packageName = BitConverter.ToInt32(uasset, offset + OffsetConstants.importPackageOffset),
-                className = BitConverter.ToInt32(uasset, offset + OffsetConstants.importClassOffset),
-                outerIndex = BitConverter.ToInt32(uasset, offset + OffsetConstants.importOuterIndexOffset),
-                importName = BitConverter.ToInt32(uasset, offset + OffsetConstants.importNameOffset)
+                packageName = new NameEntry(BitConverter.ToInt32(uasset, offset + runData.headerOffsets.importPackageOffset), BitConverter.ToInt32(uasset, offset + runData.headerOffsets.importPackageOffset + 4)),
+                className = new NameEntry(BitConverter.ToInt32(uasset, offset + runData.headerOffsets.importClassOffset), BitConverter.ToInt32(uasset, offset + runData.headerOffsets.importClassOffset + 4)),
+                outerIndex = BitConverter.ToInt32(uasset, offset + runData.headerOffsets.importOuterIndexOffset),
+                importName = new NameEntry(BitConverter.ToInt32(uasset, offset + runData.headerOffsets.importNameOffset), BitConverter.ToInt32(uasset, offset + runData.headerOffsets.importNameOffset + 4))
             };
         }
 
@@ -468,24 +512,61 @@ namespace daum
             public bool recordCommands = false;
             public string commandsRecordingFileName = "";
             public StreamWriter commandsRecordingFile = null;
+
+            public TextWriter ConsoleStdOut = Console.Out;
+
+            public HeaderOffsets headerOffsets;
         }
 
         [JsonObject]
         public class Config
         {
-            public string offsetterPath = "";
             public string drgParserPath = "";
             public bool autoParseAfterSuccess = false;
 
             public bool enablePatternReadingHeuristica = false;
         }
 
-        public record ImportData
+        public class NameEntry
         {
-            public Int32 packageName;
-            public Int32 className;
+            public NameEntry(Int32 nameIndex, Int32 nameAug)
+            {
+                this.nameIndex = nameIndex;
+                this.nameAug = nameAug;
+            }
+
+            public Int32 nameIndex;
+            public Int32 nameAug;
+
+            public override string ToString()
+            {
+                return $"{Program.runData.nameMap[nameIndex]} : {nameAug}";
+            }
+        }
+
+        public class ImportData
+        {
+            public NameEntry packageName;
+            public NameEntry className;
             public Int32 outerIndex;
-            public Int32 importName;
+            public NameEntry importName;
+
+            public string PackageString => packageName.ToString();
+            public string ClassString => className.ToString();
+            public string OuterString => GetImportObjectNameString(outerIndex); 
+            public string ObjectNameString => importName.ToString();
+
+            private string GetImportObjectNameString(Int32 importIndex)
+            {
+                if (importIndex == 0)
+                {
+                    return "null";
+                }
+                else
+                {
+                    return Program.runData.importMap[-importIndex - 1].ObjectNameString;
+                }
+            }
         }
 
         public static class PatternFolders

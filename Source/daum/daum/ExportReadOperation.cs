@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-
-using DRGOffSetterLib;
 
 namespace daum
 {
@@ -23,22 +20,22 @@ namespace daum
             { ExportParsingMachine.skipIfPatternEndsPatternElementName, SkipIfEndPatternElementProcesser },
             { ExportParsingMachine.skipIfPatternShorterThanPatternElemetnName, SkipIfPatternShorterThanPatternElementProcesser },
 
-            { ExportParsingMachine.Uint16PatternElementName, UInt16PatternElementProcesser },
+            { ExportParsingMachine.uint16PatternElementName, UInt16PatternElementProcesser },
 
-            { ExportParsingMachine.Int32PatternElementName, IntPatternElementProcesser },
-            { ExportParsingMachine.Uint32PatternElementName, UIntPatternElementProcesser },
+            { ExportParsingMachine.int32PatternElementName, IntPatternElementProcesser },
+            { ExportParsingMachine.uint32PatternElementName, UIntPatternElementProcesser },
 
-            { ExportParsingMachine.Uint64PatternElementName, UInt64PatternElementProcesser },
+            { ExportParsingMachine.uint64PatternElementName, UInt64PatternElementProcesser },
 
             { "ByteProp", BytePropPatternElementProcesser },
             { ExportParsingMachine.float32PatternElementName, FloatPatternElementProcesser },
             { ExportParsingMachine.GUIDPatternElementName, GUIDPatternElementProcesser },
-            { ExportParsingMachine.SPNTPatternElementName, SizePrefixedNullTermStringPatternElementProcesser },
+            { ExportParsingMachine.SPNTSPatternElementName, SizePrefixedNullTermStringPatternElementProcesser },
 
-            { ExportParsingMachine.BoolPatternElementName, BoolPatternElementProcesser },
+            { ExportParsingMachine.boolPatternElementName, BoolPatternElementProcesser },
 
-            { ExportParsingMachine.ObjectIndexPatternElementName, ObjectIndexPatternElementProcesser },
-            { ExportParsingMachine.NamePatternElementName, NamePatternElementProcesser },
+            { ExportParsingMachine.objectIndexPatternElementName, ObjectIndexPatternElementProcesser },
+            { ExportParsingMachine.namePatternElementName, NamePatternElementProcesser },
 
             { ExportParsingMachine.structTypeNameIndexPatternElementName, StructTypeNameIndexPatternElementProcesser },
             { structTypeHeuristicaPatternElementName, StructTypeHeurisitcaPatternElementProcesser },
@@ -48,7 +45,10 @@ namespace daum
             { ExportParsingMachine.arrayRepeatPatternElementName, ArrayRepeatPatternElementProcesser },
             { ExportParsingMachine.structPropertyArrayTypePatternElementName, StructPropertyArrayTypePatternElementProcesser },
 
-            { "MapGeneratorTypes", MapGeneratorTypesPatternElementProcesser },
+            { ExportParsingMachine.propertyNameCopyPatternElementName, Skip8Bytes },
+            { ExportParsingMachine.structPropertyNamePatternElementName, Skip8Bytes },
+
+            { ExportParsingMachine.MGTPatternElementName, MapGeneratorTypesPatternElementProcesser },
 
             { ExportParsingMachine.TPDHPatternElementName, TextPropertyDirtyHackPatternElementProcesser },
 
@@ -62,16 +62,23 @@ namespace daum
 
             Int32 exportIndex = GetExportIndex(Program.runData.uasset, args).Value;
 
-            Int32 fisrtExportOffset = BitConverter.ToInt32(Program.runData.uasset, OffsetConstants.exportOffsetOffset);
+            ReadExport(exportIndex);
+
+            return "";
+        }
+
+        public void ReadExport(Int32 exportIndex)
+        {
+            Int32 fisrtExportOffset = BitConverter.ToInt32(Program.runData.uasset, Program.runData.headerOffsets.exportOffsetOffset);
             Int32 uexpStructureOffset = BitConverter.ToInt32(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1)
-                * OffsetConstants.exportDefSize + OffsetConstants.exportSerialOffsetOffset)
-                - BitConverter.ToInt32(Program.runData.uasset, headerSizeOffset);
+                * Program.runData.headerOffsets.exportDefSize + Program.runData.headerOffsets.exportSerialOffsetOffset)
+                - BitConverter.ToInt32(Program.runData.uasset, Program.runData.headerOffsets.totalHeaderSizeOffset);
 
             Int32 uexpStructureSize = BitConverter.ToInt32(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) *
-                OffsetConstants.exportDefSize + OffsetConstants.exportSerialSizeOffset);
+                Program.runData.headerOffsets.exportDefSize + Program.runData.headerOffsets.exportSerialSizeOffset);
 
             string exportObjectName = ExportParsingMachine.FullNameString(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) *
-                OffsetConstants.exportDefSize + OffsetConstants.exportNameOffset);
+                Program.runData.headerOffsets.exportDefSize + Program.runData.headerOffsets.exportNameOffset);
 
             Console.WriteLine("--------------------");
             Console.WriteLine($"Export Index: {exportIndex}");
@@ -94,8 +101,6 @@ namespace daum
             });
 
             ExportParsingMachine.StepsTilEndOfStruct(Program.runData.uasset, Program.runData.uexp);
-
-            return "";
         }
 
         
@@ -369,6 +374,13 @@ namespace daum
             }
         }
 
+        private static void Skip8Bytes(byte[] uasset, byte[] uexp, ReadingContext readingContext)
+        {
+            readingContext.pattern.TakeArg();
+
+            readingContext.currentUexpOffset += 8;
+        }
+
         private static void MapGeneratorTypesPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
@@ -414,6 +426,9 @@ namespace daum
 
             //Epic Games probably like it when you have to fuck your brain with TexProperty having a body prefix which varies in SIZE between types.
             //I don't. I hope the author of that idea got a proper remedy.
+
+            ExportParsingMachine.ReportExportContents("Raw Bytes:");
+            ExportParsingMachine.ReportExportContents(BitConverter.ToString(uexp, readingContext.declaredSizeStartOffset, readingContext.declaredSize));
 
             readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
             ExportParsingMachine.ReportExportContents("Text Property support is postponed. ETA depends on readability of UE shitcode.");

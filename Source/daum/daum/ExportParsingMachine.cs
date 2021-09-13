@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using DRGOffSetterLib;
 
 namespace daum
 {
@@ -31,16 +30,21 @@ namespace daum
         public const string structTypeNameIndexPatternElementName = "StructTypeNameIndex";
         public const string structPropertyArrayTypePatternElementName = "StructPropertyArrayType";
 
+        public const string propertyNameCopyPatternElementName = "PropertyNameCopy";
+        public const string structPropertyNamePatternElementName = "StructPropertyName";
+
+        public const string MGTPatternElementName = "MapGeneratorTypes";
+
         public const string float32PatternElementName = "Float32";
         public const string GUIDPatternElementName = "GUID";
-        public const string SPNTPatternElementName = "SPNTS";
-        public const string BoolPatternElementName = "Bool";
-        public const string ObjectIndexPatternElementName = "ObjectIndex";
-        public const string NamePatternElementName = "Name";
-        public const string Uint16PatternElementName = "UInt16";
-        public const string Int32PatternElementName = "Int32";
-        public const string Uint32PatternElementName = "UInt32";
-        public const string Uint64PatternElementName = "UInt64";
+        public const string SPNTSPatternElementName = "SPNTS";
+        public const string boolPatternElementName = "Bool";
+        public const string objectIndexPatternElementName = "ObjectIndex";
+        public const string namePatternElementName = "Name";
+        public const string uint16PatternElementName = "UInt16";
+        public const string int32PatternElementName = "Int32";
+        public const string uint32PatternElementName = "UInt32";
+        public const string uint64PatternElementName = "UInt64";
 
         public const string TPDHPatternElementName = "TextPropertyDirtyHack";
 
@@ -169,18 +173,18 @@ namespace daum
             return valueStr;
         }
 
-        private static string ImportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 importIndex)
+        public static string ImportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 importIndex)
         {
             importIndex = -1 * importIndex - 1;
-            Int32 firstImportOffset = BitConverter.ToInt32(uasset, OffsetConstants.importOffsetOffset);
-            return ExportParsingMachine.FullNameString(uasset, firstImportOffset + importIndex * OffsetConstants.importDefSize + OffsetConstants.importNameOffset);
+            Int32 firstImportOffset = BitConverter.ToInt32(uasset, Program.runData.headerOffsets.importOffsetOffset);
+            return ExportParsingMachine.FullNameString(uasset, firstImportOffset + importIndex * Program.runData.headerOffsets.importDefSize + Program.runData.headerOffsets.importNameOffset);
         }
 
-        private static string ExportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 exportIndex)
+        public static string ExportByIndexFullNameString(byte[] uasset, byte[] uexp, Int32 exportIndex)
         {
             exportIndex = exportIndex - 1;
-            Int32 firstExportOffset = BitConverter.ToInt32(uasset, OffsetConstants.exportOffsetOffset);
-            return ExportParsingMachine.FullNameString(uasset, firstExportOffset + exportIndex * OffsetConstants.exportDefSize + OffsetConstants.exportNameOffset);
+            Int32 firstExportOffset = BitConverter.ToInt32(uasset, Program.runData.headerOffsets.exportOffsetOffset);
+            return ExportParsingMachine.FullNameString(uasset, firstExportOffset + exportIndex * Program.runData.headerOffsets.exportDefSize + Program.runData.headerOffsets.exportNameOffset);
         }
 
         public static string GUIDFromUexpOffsetToString(ref Int32 offset)
@@ -199,6 +203,19 @@ namespace daum
             offset += 16;
 
             return $"GUID: {guid1}-{guid2}-{guid3}-{guid4}";
+        }
+
+        public static List<string> ParseContext(string contextString)
+        {
+            contextString = contextString.TrimEnd('/');
+            if (contextString.Length > 0)
+            {
+                return new List<string>(contextString.Split('/'));
+            }
+            else
+            {
+                return new List<string>();
+            }
         }
     }
 

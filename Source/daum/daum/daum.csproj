@@ -9,16 +9,6 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\..\OffSetter\Source\OffSetter\DRGOffSetterLib\DRGOffSetterLib.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="DRGOffSetterLib">
-      <HintPath>..\..\..\..\OffSetter\Downloadables\OffSetter\DRGOffSetterLib.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="cd $(TargetDir)&#xD;&#xA;copy daum.exe temp\daum.exe&#xD;&#xA;copy daum.deps.json temp\daum.deps.json&#xD;&#xA;copy daum.dll temp\daum.dll&#xD;&#xA;copy daum.runtimeconfig.json temp\daum.runtimeconfig.json&#xD;&#xA;copy Newtonsoft.Json.dll temp\Newtonsoft.Json.dll&#xD;&#xA;copy DRGOffSetterLib.dll temp\DRGOffSetterLib.dll&#xD;&#xA;&#xD;&#xA;xcopy temp ..\..\..\..\..\..\Downloadables\DAUM /Y" />
   </Target>

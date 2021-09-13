@@ -10,16 +10,6 @@
         "runtime": {
           "lib/netstandard2.0/Newtonsoft.Json.dll": {}
         }
-      },
-      "DRGOffSetterLib/1.0.0": {
-        "type": "project",
-        "framework": ".NETCoreApp,Version=v5.0",
-        "compile": {
-          "bin/placeholder/DRGOffSetterLib.dll": {}
-        },
-        "runtime": {
-          "bin/placeholder/DRGOffSetterLib.dll": {}
-        }
       }
     }
   },
@@ -50,16 +40,10 @@
         "newtonsoft.json.nuspec",
         "packageIcon.png"
       ]
-    },
-    "DRGOffSetterLib/1.0.0": {
-      "type": "project",
-      "path": "../../../../OffSetter/Source/OffSetter/DRGOffSetterLib/DRGOffSetterLib.csproj",
-      "msbuildProject": "../../../../OffSetter/Source/OffSetter/DRGOffSetterLib/DRGOffSetterLib.csproj"
     }
   },
   "projectFileDependencyGroups": {
     "net5.0": [
-      "DRGOffSetterLib >= 1.0.0",
       "Newtonsoft.Json >= 13.0.1"
     ]
   },
@@ -89,11 +73,7 @@
       "frameworks": {
         "net5.0": {
           "targetAlias": "net5.0",
-          "projectReferences": {
-            "D:\\Repos\\OffSetter\\Source\\OffSetter\\DRGOffSetterLib\\DRGOffSetterLib.csproj": {
-              "projectPath": "D:\\Repos\\OffSetter\\Source\\OffSetter\\DRGOffSetterLib\\DRGOffSetterLib.csproj"
-            }
-          }
+          "projectReferences": {}
         }
       },
       "warningProperties": {
@@ -126,7 +106,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.102\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.301\\RuntimeIdentifierGraph.json"
       }
     }
   }
