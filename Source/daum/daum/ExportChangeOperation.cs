@@ -18,7 +18,8 @@ namespace daum
         private readonly static Dictionary<string, ECOCustomRunDara.Mode> modes = new Dictionary<string, ECOCustomRunDara.Mode>()
         {
             { "-a", ECOCustomRunDara.Mode.add },
-            { "-r", ECOCustomRunDara.Mode.rewrite }
+            { "-r", ECOCustomRunDara.Mode.rewrite },
+            { "-d", ECOCustomRunDara.Mode.delete }
         };
 
         private static Dictionary<string, ExportParsingMachine.PatternElementProcesser> contextSearchProcessers =
@@ -341,6 +342,10 @@ namespace daum
                     propertyPattern.Insert(propertyPattern.IndexOf(ExportParsingMachine.sizeStartPatternElementName) + 1,
                         skipContextPatternElementName);
                 }
+                if (substructName == targetPropertyName && readingContext.targetContext.Count == 1 && customRunDara.mode == ECOCustomRunDara.Mode.delete)
+                {
+                    customRunDara.deleteStartOffset = readingContext.currentUexpOffset - 16;
+                }
 
                 List<string> targetSubContext = new List<string>(readingContext.targetContext);
                 targetSubContext.RemoveAt(0);
@@ -363,6 +368,23 @@ namespace daum
                 });
 
                 ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
+
+                if (substructName == targetPropertyName && readingContext.targetContext.Count == 1 && customRunDara.mode == ECOCustomRunDara.Mode.delete)
+                {
+                    customRunDara.deleteEndOffset = readingContext.currentUexpOffset;
+
+                    readingContext.sizeChange = customRunDara.deleteStartOffset - customRunDara.deleteEndOffset;
+                    customRunDara.sizeChange = readingContext.sizeChange;
+
+                    ExportParsingMachine.machineState.Peek().sizeChange = customRunDara.sizeChange;
+
+                    Program.runData.uexp = Remove(uexp, customRunDara.deleteStartOffset, -customRunDara.sizeChange);
+
+                    readingContext.pattern.Clear();
+                    readingContext.targetContext.Clear();
+
+                    customRunDara.taskComplete = true;
+                }
             }
             else if (customRunDara.mode == ECOCustomRunDara.Mode.add && readingContext.targetContext.Count == 0)
             {
@@ -441,6 +463,7 @@ namespace daum
 
             bool thisArrayIsTarget = false;
             bool thisArrayIsExtended = false;
+            Int32 deleteElementIndex = -1;
             Int32 targetIndex = -1;
 
             if (readingContext.targetContext.Count > 1)
@@ -450,7 +473,20 @@ namespace daum
                     Int32 skipsLeft = Int32.Parse(readingContext.targetContext[1]);
                     if (skipsLeft == 0)
                     {
-                        if (readingContext.targetContext.Count > 2)
+                        if (readingContext.targetContext.Count == 3 && customRunDara.mode == ECOCustomRunDara.Mode.delete)
+                        {
+                            readingContext.targetContext.TakeArg();
+                            readingContext.targetContext.TakeArg();
+                            deleteElementIndex = Int32.Parse(readingContext.targetContext.TakeArg());
+                        }
+                        else if (readingContext.targetContext.Count == 2 && customRunDara.mode == ECOCustomRunDara.Mode.add)
+                        {
+                            thisArrayIsExtended = true;
+
+                            readingContext.targetContext.TakeArg();
+                            readingContext.targetContext.TakeArg();
+                        }
+                        else if (readingContext.targetContext.Count > 2)
                         {
                             thisArrayIsTarget = true;
 
@@ -458,13 +494,6 @@ namespace daum
                             readingContext.targetContext.TakeArg();
 
                             targetIndex = Int32.Parse(readingContext.targetContext.TakeArg());
-                        }
-                        else if (readingContext.targetContext.Count == 2)
-                        {
-                            thisArrayIsExtended = true;
-
-                            readingContext.targetContext.TakeArg();
-                            readingContext.targetContext.TakeArg();
                         }
                     }
                     else
@@ -527,7 +556,30 @@ namespace daum
                     contextReturnProcesser = ContextReturnProcesser
                 });
 
+                if (i == deleteElementIndex)
+                {
+                    customRunDara.deleteStartOffset = readingContext.currentUexpOffset;
+                }
+
                 ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
+
+                if (i == deleteElementIndex)
+                {
+                    customRunDara.deleteEndOffset = readingContext.currentUexpOffset;
+
+                    customRunDara.sizeChange = customRunDara.deleteStartOffset - customRunDara.deleteEndOffset;
+                    readingContext.sizeChange = customRunDara.sizeChange;
+
+                    DAUMLib.AddToInt32ByOffset(uexp, -1, readingContext.contextCollectionElementCountOffset);
+
+                    Program.runData.uexp = Remove(uexp, customRunDara.deleteStartOffset, -customRunDara.sizeChange);
+
+                    customRunDara.taskComplete = true;
+                    readingContext.pattern.Clear();
+                    readingContext.targetContext.Clear();
+
+                    break;
+                }
             }
 
             if (thisArrayIsExtended)
@@ -777,6 +829,9 @@ namespace daum
             public Int32 insertDeclaredSizeOffset = -1;
             public Int32 insertSizeStartOffset = -1;
 
+            public Int32 deleteStartOffset = -1;
+            public Int32 deleteEndOffset = -1;
+
             public NewStringValEncoding newStringValEncoding = NewStringValEncoding.utf8;
             public bool nullString = false;
 
@@ -791,7 +846,8 @@ namespace daum
             public enum Mode
             {
                 add,
-                rewrite
+                rewrite,
+                delete
             }
         }
 
