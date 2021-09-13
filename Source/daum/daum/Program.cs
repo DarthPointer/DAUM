@@ -14,32 +14,39 @@ namespace daum
     {
         private static string configPath;
 
-        private const string exitCommand = "exit";
-        private const string printNullConfigCommand = "nullConfig";
-        private const string parseCommand = "parse";
+        private const string exitCommand = "Exit";
+        private const string printNullConfigCommand = "NullConfig";
+        private const string parseCommand = "Parse";
         private const string fromScriptModeKey = "-s";
         private const string startRecordingCommand = "StartRec";
         private const string stopRecordingCommand = "StopRec";
 
         private static Dictionary<string, Operation> operations = new Dictionary<string, Operation>() {
-            { "-n", new NameDefOperation() },
-            { "-i", new ImportDefOperation() },
-            { "-edef", new ExportDefOperation() },
+            { "-n", new NameDefOperation() },                   // legacy
+            { "Name", new NameDefOperation() },
+            { "-i", new ImportDefOperation() },                 // legacy
+            { "Import", new ImportDefOperation() },
+            { "-edef", new ExportDefOperation() },              // legacy
+            { "ExportDef", new ExportDefOperation() },
 
-            { "-echange", new ExportChangeOperation() },
+            { "-echange", new ExportChangeOperation() },        // legacy
+            { "ExportChange", new ExportChangeOperation() },
 
             { "ReadNames", new ReadNames() },
             { "ReadImports", new ReadImports() },
             { "ReadExports", new ReadExports() },
-            { "-eread", new ExportReadOperation() },
+            { "-eread", new ExportReadOperation() },            // legacy
+            { "ExportRead", new ExportReadOperation() },
             { "DParse", new DParse() },
 
-            { "-f", new LoadFileOperation() },
+            { "-f", new LoadFileOperation() },                  // legacy
+            { "File", new LoadFileOperation() },
 
             { "OutRedir", new OutRedir() },
             { "OutRestore", new OutRestore() },
 
-            { "-o", new OffSetterCall() },
+            { "-o", new OffSetterCall() },                      // legacy
+            { "OffSetter", new OffSetterCall() },
             { "PreloadPatterns", new PreloadPatternsOperation() },
             { "ReloadFiles", new ReloadFiles() },
             { "Revert", new Revert() }
