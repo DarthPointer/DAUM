@@ -494,6 +494,11 @@ namespace daum
                             readingContext.targetContext.TakeArg();
 
                             targetIndex = Int32.Parse(readingContext.targetContext.TakeArg());
+
+                            if (targetIndex < 0)
+                            {
+                                targetIndex = readingContext.collectionElementCount + targetIndex;
+                            }
                         }
                     }
                     else
