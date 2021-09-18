@@ -24,6 +24,8 @@ namespace daum
 
         public override string ExecuteAndGetOffSetterAgrs(List<string> args, out bool doneSomething, out bool useStandardBackup)
         {
+            // TO DO: If JSON in args, use JSON
+
             ReadMap();
 
             doneSomething = false;
@@ -31,7 +33,7 @@ namespace daum
             return "";
         }
 
-        protected void ReadMap()
+        protected void ReadMap(bool useJSON = false)
         {
             currentElementNumber = EnumerationStart;
             PrepareForEnumeration();
