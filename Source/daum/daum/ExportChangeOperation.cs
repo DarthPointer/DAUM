@@ -347,8 +347,17 @@ namespace daum
                     customRunDara.deleteStartOffset = readingContext.currentUexpOffset - 16;
                 }
 
-                List<string> targetSubContext = new List<string>(readingContext.targetContext);
-                targetSubContext.RemoveAt(0);
+                List<string> targetSubContext;
+                if (substructName == targetPropertyName)
+                {
+                    targetSubContext = new List<string>(readingContext.targetContext);
+                    targetSubContext.RemoveAt(0);
+                }
+                else
+                {
+                    targetSubContext = new List<string>() { "PatternBlocker" };
+                }
+                
 
                 ExportParsingMachine.machineState.Push(new ReadingContext()
                 {
