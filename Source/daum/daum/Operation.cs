@@ -504,7 +504,7 @@ namespace daum
         private static Int32 relativeClassOffset = Program.runData.headerOffsets.exportClassOffset;
         private static Int32 relativeSuperOffset = Program.runData.headerOffsets.exportSuperOffset;
         private static Int32 relativeTemlateOffset = Program.runData.headerOffsets.exportTemplateOffset;
-        private static Int32 relativeOuterOffset = Program.runData.headerOffsets.exportTemplateOffset;
+        private static Int32 relativeOuterOffset = Program.runData.headerOffsets.exportOuterOffset;
         private static Int32 relativeObjectNameOffset = Program.runData.headerOffsets.exportNameOffset;
         private static Int32 relativeObjectFlagsOffset = Program.runData.headerOffsets.exportObjectFlagsOffset;
         private static Int32 relativeSerialSizeOffset = Program.runData.headerOffsets.exportSerialSizeOffset;
