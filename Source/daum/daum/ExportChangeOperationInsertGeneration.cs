@@ -22,6 +22,7 @@ namespace daum
 
             { ExportParsingMachine.structTypeNameIndexPatternElementName, StructTypeNameIndexFiller },
             { ExportParsingMachine.arrayElementTypeNameIndexPatternElementName, ArrayTypeNameIndexFiller },
+            { ExportParsingMachine.MGTPatternElementName, MapTypeNamesIndicesFiller },
             { ExportParsingMachine.structPropertyArrayTypePatternElementName, StructPropertyArrayTypeFiller },
 
             { ExportParsingMachine.propertyNameCopyPatternElementName, PropertyNameCopyFiller },
@@ -220,6 +221,28 @@ namespace daum
             return Insert(originalArray, insert, originalArray.Length);
         }
 
+        private static byte[] MapTypeNamesIndicesFiller(byte[] originalArray, List<string> pattern, List<string> data)
+        {
+            pattern.TakeArg();
+
+            Int32 keyType = GetNameIndex(data).Value;
+            Int32 valueTpye = GetNameIndex(data).Value;
+
+            //pattern.AddRange(Program.GetPattern($"{Program.PatternFolders.body}/{Program.runData.nameMap[elementType]}"));
+
+            byte[] insert = new byte[16];
+            BitConverter.GetBytes(keyType).CopyTo(insert, 0);
+            BitConverter.GetBytes(valueTpye).CopyTo(insert, 8);
+
+            pattern.Add(ExportParsingMachine.elementCountPatternElementName);
+            pattern.Add(ExportParsingMachine.arrayRepeatPatternElementName);
+            pattern.Add(ExportParsingMachine.arrayRepeatEndPatternElementName);
+            pattern.Add(ExportParsingMachine.elementCountPatternElementName);
+            pattern.Add(ExportParsingMachine.arrayRepeatPatternElementName);
+
+            return Insert(originalArray, insert, originalArray.Length);
+        }
+
         private static byte[] StructPropertyArrayTypeFiller(byte[] originalArray, List<string> pattern, List<string> data)
         {
             pattern.TakeArg();
@@ -271,6 +294,8 @@ namespace daum
             {
                 pattern.TakeArg();
             }
+
+            if (pattern.Count != 0 && pattern[0] == ExportParsingMachine.arrayRepeatEndPatternElementName) pattern.TakeArg();
 
             return originalArray;
         }
