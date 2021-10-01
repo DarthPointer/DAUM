@@ -37,7 +37,8 @@ namespace daum
             { "ReadExports", new ReadExports() },
             { "-eread", new ExportReadOperation() },            // legacy
             { "ExportRead", new ExportReadOperation() },
-            { "DParse", new DParse() },
+            { "DParse", new DParse(false) },
+            { "JParse", new DParse(true) },
 
             { "-f", new LoadFileOperation() },                  // legacy
             { "File", new LoadFileOperation() },
@@ -542,6 +543,12 @@ namespace daum
             {
                 return $"{Program.runData.nameMap[nameIndex]} : {nameAug}";
             }
+
+            public static implicit operator string(NameEntry param)
+            {
+                return param.ToString();
+            }
+
         }
 
         public class ImportData

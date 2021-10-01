@@ -8,7 +8,7 @@ namespace daum
 {
     class ReadExports : ReadMapOperation
     {
-        int currentIndex;
+        int currentByOrderIndex;
         int currentExportDefOffset;
 
         protected override int EnumerationStart => 1;
@@ -19,16 +19,16 @@ namespace daum
 
         protected override void PrepareForEnumeration()
         {
-            currentIndex = 0;
+            currentByOrderIndex = 0;
             currentExportDefOffset = BitConverter.ToInt32(Program.runData.uasset, Program.runData.headerOffsets.exportOffsetOffset);
         }
 
         protected override bool HasNext()
         {
-            return currentIndex < BitConverter.ToInt32(Program.runData.uasset, Program.runData.headerOffsets.exportCountOffset);
+            return currentByOrderIndex < BitConverter.ToInt32(Program.runData.uasset, Program.runData.headerOffsets.exportCountOffset);
         }
 
-        protected override void ReadNext()
+        protected override void ReadNext(bool useJson, int nextIndex)
         {
             byte[] uasset = Program.runData.uasset;
 
@@ -49,21 +49,44 @@ namespace daum
                 otherData[i] = BitConverter.ToInt32(uasset, currentExportDefOffset + Program.runData.headerOffsets.exportOtherDataOffset + 4 * i);
             }
 
-            ReportElementContents($"Class: {ObjectNameStringFromIndex(_class)}");
-            ReportElementContents($"Super: {super}");
-            ReportElementContents($"Template: {ObjectNameStringFromIndex(template)}");
-            ReportElementContents($"Outer: {ObjectNameStringFromIndex(outer)}");
+            if (useJson)
+            {
+                FilesStructure.currentFile.exportMap.exports[currentByOrderIndex] = new ExportDefinitionStamp()
+                {
+                    thisIndex = nextIndex,
 
-            ReportElementContents($"Name: {new Program.NameEntry(name, nameAug)}");
+                    _class = ObjectNameStringFromIndex(_class),
+                    super = super,
+                    template = ObjectNameStringFromIndex(template),
+                    outer = ObjectNameStringFromIndex(outer),
 
-            ReportElementContents($"Serial Size: {serialSize}");
-            ReportElementContents($"Serial Offset: {serialOffset}");
+                    name = new Program.NameEntry(name, nameAug),
 
-            ReportElementContents($"Flags: {flags}");
+                    serialSize = serialSize,
+                    serialOffset = serialOffset,
 
-            ReportElementContents($"Other Data: {string.Join(' ', otherData)}");
+                    flags = flags,
+                    otherData = otherData
+                };
+            }
+            else
+            {
+                ReportElementContents($"Class: {ObjectNameStringFromIndex(_class)}");
+                ReportElementContents($"Super: {super}");
+                ReportElementContents($"Template: {ObjectNameStringFromIndex(template)}");
+                ReportElementContents($"Outer: {ObjectNameStringFromIndex(outer)}");
 
-            currentIndex++;
+                ReportElementContents($"Name: {new Program.NameEntry(name, nameAug)}");
+
+                ReportElementContents($"Serial Size: {serialSize}");
+                ReportElementContents($"Serial Offset: {serialOffset}");
+
+                ReportElementContents($"Flags: {flags}");
+
+                ReportElementContents($"Other Data: {string.Join(' ', otherData)}");
+            }
+
+            currentByOrderIndex++;
             currentExportDefOffset += Program.runData.headerOffsets.exportDefSize;
         }
 
@@ -90,9 +113,9 @@ namespace daum
             }
         }
 
-        public static void Read()
+        public static void Read(bool useJson)
         {
-            new ReadExports().ReadMap();
+            new ReadExports().ReadMap(useJson);
         }
     }
 }
