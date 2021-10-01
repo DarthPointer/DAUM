@@ -20,29 +20,36 @@ namespace daum
 
         protected abstract bool HasNext();
 
-        protected abstract void ReadNext();
+        protected abstract void ReadNext(bool useJson, int nextIndex);
 
         public override string ExecuteAndGetOffSetterAgrs(List<string> args, out bool doneSomething, out bool useStandardBackup)
         {
             // TO DO: If JSON in args, use JSON
 
-            ReadMap();
+            ReadMap(useJSON: false);
 
             doneSomething = false;
             useStandardBackup = false;
             return "";
         }
 
-        protected void ReadMap(bool useJSON = false)
+        protected void ReadMap(bool useJSON)
         {
             currentElementNumber = EnumerationStart;
             PrepareForEnumeration();
 
             while (HasNext())
             {
-                Console.WriteLine("--------------------");
-                Console.WriteLine($"{MapElementName} {currentElementNumber}:");
-                ReadNext();
+                if (useJSON)
+                {
+
+                }
+                else
+                {
+                    Console.WriteLine("--------------------");
+                    Console.WriteLine($"{MapElementName} {currentElementNumber}:");
+                }
+                ReadNext(useJSON, currentElementNumber);
 
                 currentElementNumber += EnumerationIncrement;
             }

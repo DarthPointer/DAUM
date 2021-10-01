@@ -8,7 +8,13 @@ namespace daum
         private const string structTypeHeuristicaPatternElementName = "structTypeHeuristica";
 
         public const string UnknownBytesPatternElementName = "UnknownBytes";
-        
+
+        private static ExportExpansion exportJson;
+        private static bool useJson;
+
+        private static Stack<Property> propertyContexts;
+        private static Stack<List<IPropertyElement>> elementsListContexts;
+
         private static Dictionary<string, ExportParsingMachine.PatternElementProcesser> patternElementProcessers =
             new Dictionary<string, ExportParsingMachine.PatternElementProcesser>()
         {
@@ -67,8 +73,10 @@ namespace daum
             return "";
         }
 
-        public void ReadExport(Int32 exportIndex)
+        public void ReadExport(Int32 exportIndex, bool useJson = false)
         {
+            ExportReadOperation.useJson = useJson;
+
             Int32 fisrtExportOffset = BitConverter.ToInt32(Program.runData.uasset, Program.runData.headerOffsets.exportOffsetOffset);
             Int32 uexpStructureOffset = BitConverter.ToInt32(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1)
                 * Program.runData.headerOffsets.exportDefSize + Program.runData.headerOffsets.exportSerialOffsetOffset)
@@ -80,12 +88,30 @@ namespace daum
             string exportObjectName = ExportParsingMachine.FullNameString(Program.runData.uasset, fisrtExportOffset + (exportIndex - 1) *
                 Program.runData.headerOffsets.exportDefSize + Program.runData.headerOffsets.exportNameOffset);
 
-            Console.WriteLine("--------------------");
-            Console.WriteLine($"Export Index: {exportIndex}");
-            Console.WriteLine($"Export Object Name {exportObjectName}");
-            Console.WriteLine("--------------------");
+            if (useJson)
+            {
+                exportJson = new ExportExpansion();
+                FilesStructure.currentFile.exportsExpansion[exportIndex - 1] = exportJson;
 
-            ExportParsingMachine.ResetSLIString();
+                exportJson.thisIndex = exportIndex;
+                exportJson.name = exportObjectName;
+                exportJson.properties = new List<IPropertyElement>();
+
+                propertyContexts = new Stack<Property>();
+                elementsListContexts = new Stack<List<IPropertyElement>>();
+
+                elementsListContexts.Push(exportJson.properties);
+            }
+            else
+            {
+                Console.WriteLine("--------------------");
+                Console.WriteLine($"Export Index: {exportIndex}");
+                Console.WriteLine($"Export Object Name {exportObjectName}");
+                Console.WriteLine("--------------------");
+
+                ExportParsingMachine.ResetSLIString();
+            }
+
             ExportParsingMachine.machineState = new Stack<ReadingContext>();
             ExportParsingMachine.machineState.Push(new ReadingContext()
             {
@@ -111,7 +137,14 @@ namespace daum
             readingContext.currentUexpOffset += 4;
             readingContext.pattern.TakeArg();
 
-            ExportParsingMachine.ReportExportContents($"Size: {readingContext.declaredSize}");
+            if (useJson)
+            {
+                propertyContexts.Peek().size = readingContext.declaredSize;
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Size: {readingContext.declaredSize}");
+            }
         }
 
         private static void SkipPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -127,14 +160,32 @@ namespace daum
             
             readingContext.declaredSizeStartOffset = readingContext.currentUexpOffset;
 
-            ExportParsingMachine.ReportExportContents($"Size Start Offset: {readingContext.declaredSizeStartOffset}");
+            if (useJson)
+            {
+                propertyContexts.Peek().sizeStartOffset = readingContext.declaredSizeStartOffset;
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Size Start Offset: {readingContext.declaredSizeStartOffset}");
+            }
         }
 
         private static void UInt16PatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
-            ExportParsingMachine.ReportExportContents($"Int Value: {BitConverter.ToUInt16(uexp, readingContext.currentUexpOffset)}");
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<UInt16>()
+                {
+                    name = "UInt16",
+                    value = BitConverter.ToUInt16(uexp, readingContext.currentUexpOffset)
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Int Value: {BitConverter.ToUInt16(uexp, readingContext.currentUexpOffset)}");
+            }
 
             readingContext.currentUexpOffset += 2;
         }
@@ -143,7 +194,17 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            ExportParsingMachine.ReportExportContents($"Int Value: {BitConverter.ToInt32(uexp, readingContext.currentUexpOffset)}");
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<Int32>() {
+                    name = "Int32",
+                    value = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset)
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Int Value: {BitConverter.ToInt32(uexp, readingContext.currentUexpOffset)}");
+            }
 
             readingContext.currentUexpOffset += 4;
         }
@@ -152,7 +213,18 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            ExportParsingMachine.ReportExportContents($"Int Value: {BitConverter.ToUInt32(uexp, readingContext.currentUexpOffset)}");
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<UInt32>()
+                {
+                    name = "UInt32",
+                    value = BitConverter.ToUInt32(uexp, readingContext.currentUexpOffset)
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Int Value: {BitConverter.ToUInt32(uexp, readingContext.currentUexpOffset)}");
+            };
 
             readingContext.currentUexpOffset += 4;
         }
@@ -161,7 +233,18 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            ExportParsingMachine.ReportExportContents($"Int Value: {BitConverter.ToUInt64(uexp, readingContext.currentUexpOffset)}");
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<UInt64>()
+                {
+                    name = "UInt64",
+                    value = BitConverter.ToUInt64(uexp, readingContext.currentUexpOffset)
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Int Value: {BitConverter.ToUInt64(uexp, readingContext.currentUexpOffset)}");
+            }
 
             readingContext.currentUexpOffset += 8;
         }
@@ -170,7 +253,18 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            ExportParsingMachine.ReportExportContents($"Bool Value: {BitConverter.ToBoolean(uexp, readingContext.currentUexpOffset)}");
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<bool>()
+                {
+                    name = "Bool",
+                    value = BitConverter.ToBoolean(uexp, readingContext.currentUexpOffset)
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Bool Value: {BitConverter.ToBoolean(uexp, readingContext.currentUexpOffset)}");
+            }
 
             readingContext.currentUexpOffset += 1;
         }
@@ -179,7 +273,18 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            ExportParsingMachine.ReportExportContents($"Float Value: {BitConverter.ToSingle(uexp, readingContext.currentUexpOffset)}");
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<float>()
+                {
+                    name = "Float32",
+                    value = BitConverter.ToSingle(uexp, readingContext.currentUexpOffset)
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Float Value: {BitConverter.ToSingle(uexp, readingContext.currentUexpOffset)}");
+            }
 
             readingContext.currentUexpOffset += 4;
         }
@@ -187,7 +292,21 @@ namespace daum
         private static void GUIDPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
-            ExportParsingMachine.ReportExportContents(ExportParsingMachine.GUIDFromUexpOffsetToString(ref readingContext.currentUexpOffset));
+            
+            string guidString = ExportParsingMachine.GUIDFromUexpOffsetToString(ref readingContext.currentUexpOffset);
+
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<string>()
+                {
+                    name = "GUID",
+                    value = guidString
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"GUID Value: {guidString}");
+            }
         }
 
         private static void SizePrefixedNullTermStringPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -196,14 +315,38 @@ namespace daum
 
             string value = Program.SizePrefixedStringFromOffsetOffsetAdvance(uexp, ref readingContext.currentUexpOffset);
 
-            ExportParsingMachine.ReportExportContents($"String: {value}");
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<string>()
+                {
+                    name = "String",
+                    value = value
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"String: {value}");
+            }
         }
 
         private static void BytePropPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
         {
             readingContext.pattern.TakeArg();
 
-            ExportParsingMachine.ReportExportContents($"Bytes Value: {BitConverter.ToString(uexp, readingContext.currentUexpOffset, readingContext.declaredSize)}");
+            string value = BitConverter.ToString(uexp, readingContext.currentUexpOffset, readingContext.declaredSize);
+
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<string>()
+                {
+                    name = "Byte(s)",
+                    value = value
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Bytes Value: {value}");
+            }
 
             readingContext.currentUexpOffset += readingContext.declaredSize;
         }
@@ -213,8 +356,20 @@ namespace daum
             readingContext.pattern.TakeArg();
 
             Int32 count = Int32.Parse(readingContext.pattern.TakeArg());
+            string value = BitConverter.ToString(uexp, readingContext.currentUexpOffset, count);
 
-            ExportParsingMachine.ReportExportContents($"Unknown Bytes: {BitConverter.ToString(uexp, readingContext.currentUexpOffset, count)}");
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<string>()
+                {
+                    name = "Raw Bytes",
+                    value = value
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Unknown Bytes: {value}");
+            }
 
             readingContext.currentUexpOffset += count;
         }
@@ -223,7 +378,20 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
 
-            ExportParsingMachine.ReportExportContents($"Name: {ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset)}");
+            string value = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
+
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<string>()
+                {
+                    name = "Name",
+                    value = value
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Name: {value}");
+            }
 
             readingContext.currentUexpOffset += 8;
         }
@@ -232,7 +400,19 @@ namespace daum
         {
             readingContext.pattern.TakeArg();
             string typeName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
-            ExportParsingMachine.ReportExportContents($"Structure Type: {typeName}");
+
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<string>()
+                {
+                    name = "Structure Type",
+                    value = typeName
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Structure Type: {typeName}");
+            }
 
             readingContext.currentUexpOffset += 8;
 
@@ -257,15 +437,18 @@ namespace daum
             switch (heuristicaStatus)
             {
                 case PatternHeuristica.HeuristicaStatus.Failure:
-                    ExportParsingMachine.ReportExportContents("Heuristica failed to give assumed structure pattern");
+                    if (!useJson)
+                        ExportParsingMachine.ReportExportContents("Heuristica failed to give assumed structure pattern");
                     break;
 
                 case PatternHeuristica.HeuristicaStatus.NonCriticalFailure:
-                    ExportParsingMachine.ReportExportContents("Heuristica failed to find a meaningful pattern, boilerplate is provided");
+                    if (!useJson)
+                        ExportParsingMachine.ReportExportContents("Heuristica failed to find a meaningful pattern, boilerplate is provided");
                     break;
 
                 case PatternHeuristica.HeuristicaStatus.Success:
-                    ExportParsingMachine.ReportExportContents("Heuristica proposed a structure pattern, applying it");
+                    if (!useJson)
+                        ExportParsingMachine.ReportExportContents("Heuristica proposed a structure pattern, applying it");
                     break;
             }
         }
@@ -277,7 +460,18 @@ namespace daum
             string typeName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 8;
 
-            ExportParsingMachine.ReportExportContents($"Array Element Type: {typeName}");
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<string>()
+                {
+                    name = "Array Element Type",
+                    value = typeName
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Array Element Type: {typeName}");
+            }
 
             if (Program.PatternExists($"{Program.PatternFolders.body}/{typeName}"))
             {
@@ -294,7 +488,18 @@ namespace daum
 
             readingContext.collectionElementCount = elementCount;
 
-            ExportParsingMachine.ReportExportContents($"Elements Count: {elementCount}");
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<Int32>()
+                {
+                    name = "Element Count",
+                    value = elementCount
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Elements Count: {elementCount}");
+            }
         }
 
         private static void ArrayRepeatPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -333,7 +538,21 @@ namespace daum
 
             for (int i = 0; i < readingContext.collectionElementCount; i++)
             {
-                ExportParsingMachine.ReportExportContents($"Element {i}");
+                if (useJson)
+                {
+                    ArrayElement newArrayElement = new ArrayElement()
+                    {
+                        index = i,
+                        contents = new List<IPropertyElement>()
+                    };
+
+                    elementsListContexts.Peek().Add(newArrayElement);
+                    elementsListContexts.Push(newArrayElement.contents);
+                }
+                else
+                {
+                    ExportParsingMachine.ReportExportContents($"Element {i}");
+                }
 
                 ExportParsingMachine.machineState.Push(new ReadingContext()
                 {
@@ -348,6 +567,11 @@ namespace daum
                 });
 
                 ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
+
+                if (useJson)
+                {
+                    elementsListContexts.Pop();
+                }
             }
         }
 
@@ -358,7 +582,18 @@ namespace daum
             string typeName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 8;
 
-            ExportParsingMachine.ReportExportContents($"Element structure type: {typeName}");
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<string>()
+                {
+                    name = "Element Structure Type",
+                    value = typeName
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Element Structure Type: {typeName}");
+            }
 
             if (Program.PatternExists($"{Program.PatternFolders.structure}/{typeName}"))
             {
@@ -391,7 +626,23 @@ namespace daum
             string tVal = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 8;
 
-            ExportParsingMachine.ReportExportContents($"<{tKey}, {tVal}>");
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<string>()
+                {
+                    name = "Key Type",
+                    value = tKey
+                });
+                elementsListContexts.Peek().Add(new SimpleElement<string>()
+                {
+                    name = "Value Type",
+                    value = tVal
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"<{tKey}, {tVal}>");
+            }
 
             if (Program.PatternExists($"{Program.PatternFolders.body}/{tKey}") && Program.PatternExists($"{Program.PatternFolders.body}/{tVal}"))
             {
@@ -427,11 +678,26 @@ namespace daum
             //Epic Games probably like it when you have to fuck your brain with TexProperty having a body prefix which varies in SIZE between types.
             //I don't. I hope the author of that idea got a proper remedy.
 
-            ExportParsingMachine.ReportExportContents("Raw Bytes:");
-            ExportParsingMachine.ReportExportContents(BitConverter.ToString(uexp, readingContext.declaredSizeStartOffset, readingContext.declaredSize));
+            string value = BitConverter.ToString(uexp, readingContext.declaredSizeStartOffset, readingContext.declaredSize);
+
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<string>()
+                {
+                    name = "Raw Bytes",
+                    value = value
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents("Raw Bytes:");
+                ExportParsingMachine.ReportExportContents(value);
+            }
 
             readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
-            ExportParsingMachine.ReportExportContents("Text Property support is postponed. ETA depends on readability of UE shitcode.");
+
+            if (!useJson)
+                ExportParsingMachine.ReportExportContents("Text Property support is postponed. ETA depends on readability of UE shitcode.");
         }
 
         private static void SkipIfEndPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -442,7 +708,8 @@ namespace daum
             {
                 readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
 
-                ExportParsingMachine.ReportExportContents("Skipping structure due to lack of pattern");
+                if (!useJson)
+                    ExportParsingMachine.ReportExportContents("Skipping structure due to lack of pattern");
             }
         }
 
@@ -456,7 +723,8 @@ namespace daum
                 readingContext.currentUexpOffset = readingContext.declaredSizeStartOffset + readingContext.declaredSize;
                 readingContext.pattern.Clear();
 
-                ExportParsingMachine.ReportExportContents("Skipping structure due to lack of pattern");
+                if (!useJson)
+                    ExportParsingMachine.ReportExportContents("Skipping structure due to lack of pattern");
             }
         }
 
@@ -465,7 +733,18 @@ namespace daum
             readingContext.pattern.TakeArg();
             string valueStr = ExportParsingMachine.ObjectByIndexFullNameString(uasset, uexp, readingContext);
 
-            ExportParsingMachine.ReportExportContents($"Object: {valueStr}");
+            if (useJson)
+            {
+                elementsListContexts.Peek().Add(new SimpleElement<string>()
+                {
+                    name = "Object",
+                    value = valueStr
+                });
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents($"Object: {valueStr}");
+            }
         }
 
         private static void NoneTerminatedPropListPatternElementProcesser(byte[] uasset, byte[] uexp, ReadingContext readingContext)
@@ -482,8 +761,24 @@ namespace daum
             string typeName = ExportParsingMachine.FullNameString(uexp, readingContext.currentUexpOffset);
             readingContext.currentUexpOffset += 8;
 
-            ExportParsingMachine.ReportExportContents("------------------------------");
-            ExportParsingMachine.ReportExportContents($"{substructName} is {typeName}");
+            if (useJson)
+            {
+                Property newProperty = new Property()
+                {
+                    name = substructName,
+                    type = typeName,
+                    contents = new List<IPropertyElement>()
+                };
+                elementsListContexts.Peek().Add(newProperty);
+
+                elementsListContexts.Push(newProperty.contents);
+                propertyContexts.Push(newProperty);
+            }
+            else
+            {
+                ExportParsingMachine.ReportExportContents("------------------------------");
+                ExportParsingMachine.ReportExportContents($"{substructName} is {typeName}");
+            }
 
             List<string> propertyPattern;
             try
@@ -492,14 +787,17 @@ namespace daum
             }
             catch
             {
-                ExportParsingMachine.ReportExportContents($"Failed to find a pattern for property type {typeName}");
+                if (!useJson)
+                    ExportParsingMachine.ReportExportContents($"Failed to find a pattern for property type {typeName}");
 
                 Int32 assumedSize = BitConverter.ToInt32(uexp, readingContext.currentUexpOffset);
                 readingContext.currentUexpOffset += 8;
 
-                ExportParsingMachine.ReportExportContents($"Assumed property size {assumedSize}");
+                if (!useJson)
+                    ExportParsingMachine.ReportExportContents($"Assumed property size {assumedSize}");
 
-                ExportParsingMachine.ReportExportContents($"Assumed property body {BitConverter.ToString(uexp, readingContext.currentUexpOffset + 1, assumedSize)}");
+                if (!useJson)
+                    ExportParsingMachine.ReportExportContents($"Assumed property body {BitConverter.ToString(uexp, readingContext.currentUexpOffset + 1, assumedSize)}");
 
                 throw;
             }
@@ -514,10 +812,16 @@ namespace daum
                 pattern = propertyPattern,
                 patternAlphabet = readingContext.patternAlphabet,
 
-                structCategory = ReadingContext.StructCategory.nonExport
+                structCategory = ReadingContext.StructCategory.nonExport,
             });
 
             ExportParsingMachine.ExecutePushedReadingContext(uasset, uexp, readingContext);
+
+            if (useJson)
+            {
+                propertyContexts.Pop();
+                elementsListContexts.Pop();
+            }
         }
     }
 }

@@ -26,19 +26,36 @@ namespace daum
             return currentIndex < Program.runData.importMap.Length;
         }
 
-        protected override void ReadNext()
+        protected override void ReadNext(bool useJson, int nextIndex)
         {
-            Program.ImportData importData = Program.runData.importMap[currentIndex++];
+            Program.ImportData importData = Program.runData.importMap[currentIndex];
 
-            ReportElementContents($"Package: {importData.PackageString}");
-            ReportElementContents($"Class: {importData.ClassString}");
-            ReportElementContents($"Outer: {importData.OuterString}");
-            ReportElementContents($"Name: {importData.ObjectNameString}");
+            if (useJson)
+            {
+                FilesStructure.currentFile.importMap.imports[currentIndex] = new ImportStamp()
+                {
+                    thisIndex = nextIndex,
+
+                    package = importData.PackageString,
+                    _class = importData.ClassString,
+                    outer = importData.OuterString,
+                    name = importData.ObjectNameString
+                };
+            }
+            else
+            {
+                ReportElementContents($"Package: {importData.PackageString}");
+                ReportElementContents($"Class: {importData.ClassString}");
+                ReportElementContents($"Outer: {importData.OuterString}");
+                ReportElementContents($"Name: {importData.ObjectNameString}");
+            }
+            
+            currentIndex++;
         }
 
-        public static void Read()
+        public static void Read(bool useJson)
         {
-            new ReadImports().ReadMap();
+            new ReadImports().ReadMap(useJson);
         }
     }
 }
