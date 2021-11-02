@@ -37,8 +37,9 @@ namespace daum
             { "ReadExports", new ReadExports() },
             { "-eread", new ExportReadOperation() },            // legacy
             { "ExportRead", new ExportReadOperation() },
-            { "DParse", new DParse(false) },
-            { "JParse", new DParse(true) },
+            { "DParse", new DParse() },
+            { "JParse", new DParse(useJson: true) },
+            { "IndividualJParse", new DParse(useJson: true, individualFiles: true) },
 
             { "-f", new LoadFileOperation() },                  // legacy
             { "File", new LoadFileOperation() },

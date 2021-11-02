@@ -8,10 +8,12 @@ namespace daum
     class DParse : Operation
     {
         public bool useJson = false;
+        public bool individualFiles = false;
 
-        public DParse(bool useJson)
+        public DParse(bool useJson = false, bool individualFiles = false)
         {
             this.useJson = useJson;
+            this.individualFiles = individualFiles;
         }
 
         public override string ExecuteAndGetOffSetterAgrs(List<string> args, out bool doneSomething, out bool useStandardBackup)
@@ -19,23 +21,23 @@ namespace daum
             string parseTarget = args.Count > 0 ? args.TakeArg() : Program.runData.uassetFileName;
             string initialFile = Program.runData.uassetFileName;
 
-            if (useJson)
+            if (useJson && !individualFiles)
             {
                 FilesStructure.instance = new FilesStructure();
             }
 
             if (File.Exists(parseTarget))
             {
-                ParseFile(parseTarget, useJson);
+                ParseFile(parseTarget, useJson, individualFiles);
             }
             else if (Directory.Exists(parseTarget))
             {
-                ParseFolder(parseTarget, useJson);
+                ParseFolder(parseTarget, useJson, individualFiles);
             }
 
             if (initialFile.Length > 0) Program.LoadFile(initialFile);
 
-            if (useJson)
+            if (useJson && !individualFiles)
             {
                 Console.Write(JsonConvert.SerializeObject(FilesStructure.instance, new JsonSerializerSettings()
                 {
@@ -49,7 +51,7 @@ namespace daum
             return "";
         }
 
-        private static void ParseFile(string filePath, bool useJson)
+        private static void ParseFile(string filePath, bool useJson, bool individualFiles)
         {
             Program.LoadFile(filePath);
 
@@ -57,6 +59,11 @@ namespace daum
 
             if (useJson)
             {
+                if (individualFiles)
+                {
+                    FilesStructure.instance = new FilesStructure();
+                }
+
                 FilesStructure.currentFile = new FileStructure();
                 FilesStructure.instance.files[filePath.Substring(0, filePath.LastIndexOf('.'))] = FilesStructure.currentFile;
 
@@ -72,6 +79,15 @@ namespace daum
                 FilesStructure.currentFile.exportMap = new ExportMapStamp();
                 FilesStructure.currentFile.exportMap.exports = new ExportDefinitionStamp[exportCount];
                 FilesStructure.currentFile.exportsExpansion = new ExportExpansion[exportCount];
+
+                if (individualFiles)
+                {
+                    File.WriteAllText(Program.runData.uassetFileName.Substring(0, Program.runData.uassetFileName.LastIndexOf('.') + 1) + "json",
+                        JsonConvert.SerializeObject(FilesStructure.instance, new JsonSerializerSettings()
+                    {
+                        Formatting = Formatting.Indented
+                    }));
+                }
             }
             else
             {
@@ -115,11 +131,11 @@ namespace daum
             }
         }
 
-        private static void ParseFolder(string folderPath, bool useJson)
+        private static void ParseFolder(string folderPath, bool useJson, bool individualFiles)
         {
             foreach (string filePath in Directory.EnumerateFiles(folderPath, "*.uasset", SearchOption.AllDirectories))
             {
-                ParseFile(filePath, useJson);
+                ParseFile(filePath, useJson, individualFiles);
             }
         }
     }
