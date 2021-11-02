@@ -79,15 +79,6 @@ namespace daum
                 FilesStructure.currentFile.exportMap = new ExportMapStamp();
                 FilesStructure.currentFile.exportMap.exports = new ExportDefinitionStamp[exportCount];
                 FilesStructure.currentFile.exportsExpansion = new ExportExpansion[exportCount];
-
-                if (individualFiles)
-                {
-                    File.WriteAllText(Program.runData.uassetFileName.Substring(0, Program.runData.uassetFileName.LastIndexOf('.') + 1) + "json",
-                        JsonConvert.SerializeObject(FilesStructure.instance, new JsonSerializerSettings()
-                    {
-                        Formatting = Formatting.Indented
-                    }));
-                }
             }
             else
             {
@@ -128,6 +119,15 @@ namespace daum
             for (Int32 exportIndex = 1; exportIndex < exportCount + 1; exportIndex++)
             {
                 exportReadOperation.ReadExport(exportIndex, useJson);
+            }
+
+            if (useJson && individualFiles)
+            {
+                File.WriteAllText(Program.runData.uassetFileName.Substring(0, Program.runData.uassetFileName.LastIndexOf('.') + 1) + "json",
+                    JsonConvert.SerializeObject(FilesStructure.instance, new JsonSerializerSettings()
+                    {
+                        Formatting = Formatting.Indented
+                    }));
             }
         }
 
