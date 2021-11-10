@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 
 namespace daum
@@ -124,7 +125,7 @@ namespace daum
             if (useJson && individualFiles)
             {
                 File.WriteAllText(Program.runData.uassetFileName.Substring(0, Program.runData.uassetFileName.LastIndexOf('.') + 1) + "json",
-                    JsonConvert.SerializeObject(FilesStructure.instance, new JsonSerializerSettings()
+                    JsonConvert.SerializeObject(FilesStructure.instance.files.Values.First(), new JsonSerializerSettings()
                     {
                         Formatting = Formatting.Indented
                     }));
