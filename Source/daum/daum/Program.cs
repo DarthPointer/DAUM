@@ -246,7 +246,7 @@ namespace daum
                             if (runData.uassetFileName != "")
                             {
                                 runData.commandsRecordingFile.WriteLine($"Syntax {runData.currentSyntax.Code}");
-                                runData.commandsRecordingFile.WriteLine($"File {runData.uassetFileName}");
+                                runData.commandsRecordingFile.WriteLine($"File {runData.uassetFileName.Replace('\\', '/')}");
                             }
                         }
 
