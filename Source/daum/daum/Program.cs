@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Newtonsoft.Json;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 
@@ -43,6 +44,7 @@ namespace daum
 
             { "-f", new LoadFileOperation() },                  // legacy
             { "File", new LoadFileOperation() },
+            { "Syntax", new daum.Syntax() },
 
             { "OutRedir", new OutRedir() },
             { "OutRestore", new OutRestore() },
@@ -53,6 +55,13 @@ namespace daum
             { "PreloadPatterns", new PreloadPatternsOperation() },
             { "ReloadFiles", new ReloadFiles() },
             { "Revert", new Revert() }
+        };
+
+        static string defaultSyntax = "2.0.1.0";
+
+        public static Dictionary<string, Syntax> syntaxes = new Dictionary<string, Syntax>()
+        {
+            { "2.0.1.0", new Syntax() }
         };
 
         public const string backupPostfix = ".daum";
@@ -72,6 +81,7 @@ namespace daum
             runData = new RunData()
             {
                 toolDir = toolDir,
+                currentSyntax = syntaxes[defaultSyntax]
             };
 
             List<string> argList = new List<string>(args);
@@ -235,7 +245,8 @@ namespace daum
 
                             if (runData.uassetFileName != "")
                             {
-                                runData.commandsRecordingFile.WriteLine($"-f {runData.uassetFileName}");
+                                runData.commandsRecordingFile.WriteLine($"Syntax {runData.currentSyntax.Code}");
+                                runData.commandsRecordingFile.WriteLine($"File {runData.uassetFileName.Replace('\\', '/')}");
                             }
                         }
 
@@ -518,6 +529,13 @@ namespace daum
             public TextWriter ConsoleStdOut = Console.Out;
 
             public HeaderOffsets headerOffsets;
+
+            public Syntax currentSyntax;
+        }
+
+        public class Syntax
+        {
+            public string Code => syntaxes.Where(x => x.Value == this).First().Key;
         }
 
         [JsonObject]
