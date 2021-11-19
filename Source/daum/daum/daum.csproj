@@ -5,4 +5,9 @@
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Interp\" />
+    <Folder Include="Operation\" />
+  </ItemGroup>
+
 </Project>
