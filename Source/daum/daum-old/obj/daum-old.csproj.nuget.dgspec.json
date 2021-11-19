@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Repos\\DAUM\\Source\\daum\\DAUM\\DAUM.csproj": {}
+    "D:\\Repos\\DAUM\\Source\\daum\\daum-old\\daum-old.csproj": {}
   },
   "projects": {
-    "D:\\Repos\\DAUM\\Source\\daum\\DAUM\\DAUM.csproj": {
+    "D:\\Repos\\DAUM\\Source\\daum\\daum-old\\daum-old.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Repos\\DAUM\\Source\\daum\\DAUM\\DAUM.csproj",
-        "projectName": "DAUM",
-        "projectPath": "D:\\Repos\\DAUM\\Source\\daum\\DAUM\\DAUM.csproj",
+        "projectUniqueName": "D:\\Repos\\DAUM\\Source\\daum\\daum-old\\daum-old.csproj",
+        "projectName": "daum-old",
+        "projectPath": "D:\\Repos\\DAUM\\Source\\daum\\daum-old\\daum-old.csproj",
         "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-        "outputPath": "D:\\Repos\\DAUM\\Source\\daum\\DAUM\\obj\\",
+        "outputPath": "D:\\Repos\\DAUM\\Source\\daum\\daum-old\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config",
@@ -39,6 +39,12 @@
       "frameworks": {
         "net5.0": {
           "targetAlias": "net5.0",
+          "dependencies": {
+            "Newtonsoft.Json": {
+              "target": "Package",
+              "version": "[13.0.1, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",

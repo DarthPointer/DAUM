@@ -1,10 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "rgwVCU4T2p+injux3Hn2G1CIwWWcVvLQe+unJAUeN9I1fiLwJ8gsGX+7MJCorKmdekKXKyiTH6btaDdMzbbspA==",
+  "dgSpecHash": "TXZwocR0W59C9eeK4CulUSWv04P5juUSFDwnxfkrvOAzvvrOTBxpbtwRdPK+NFWlHZJKXX+Kn1ZWx0q6Z6MAAQ==",
   "success": true,
-  "projectFilePath": "D:\\Repos\\DAUM\\Source\\daum\\daum\\daum.csproj",
-  "expectedPackageFiles": [
-    "C:\\Users\\Admin\\.nuget\\packages\\newtonsoft.json\\13.0.1\\newtonsoft.json.13.0.1.nupkg.sha512"
-  ],
+  "projectFilePath": "D:\\Repos\\DAUM\\Source\\daum\\DAUM\\DAUM.csproj",
+  "expectedPackageFiles": [],
   "logs": []
 }

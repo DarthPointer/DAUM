@@ -6,12 +6,12 @@
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v5.0": {
-      "daum/1.0.0": {
+      "daum-old/1.0.0": {
         "dependencies": {
           "Newtonsoft.Json": "13.0.1"
         },
         "runtime": {
-          "daum.dll": {}
+          "daum-old.dll": {}
         }
       },
       "Newtonsoft.Json/13.0.1": {
@@ -25,7 +25,7 @@
     }
   },
   "libraries": {
-    "daum/1.0.0": {
+    "daum-old/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

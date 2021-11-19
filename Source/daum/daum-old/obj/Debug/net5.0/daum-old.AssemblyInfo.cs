@@ -11,12 +11,12 @@
 using System;
 using System.Reflection;
 
-[assembly: System.Reflection.AssemblyCompanyAttribute("DAUM")]
+[assembly: System.Reflection.AssemblyCompanyAttribute("daum-old")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
 [assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
-[assembly: System.Reflection.AssemblyProductAttribute("DAUM")]
-[assembly: System.Reflection.AssemblyTitleAttribute("DAUM")]
+[assembly: System.Reflection.AssemblyProductAttribute("daum-old")]
+[assembly: System.Reflection.AssemblyTitleAttribute("daum-old")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
 
 // Создано классом WriteCodeFragment MSBuild.

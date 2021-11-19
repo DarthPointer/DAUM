@@ -1,0 +1,17 @@
+D:\Repos\DAUM\Source\daum\daum-old\bin\Debug\net5.0\daum-old.exe
+D:\Repos\DAUM\Source\daum\daum-old\bin\Debug\net5.0\daum-old.deps.json
+D:\Repos\DAUM\Source\daum\daum-old\bin\Debug\net5.0\daum-old.runtimeconfig.json
+D:\Repos\DAUM\Source\daum\daum-old\bin\Debug\net5.0\daum-old.runtimeconfig.dev.json
+D:\Repos\DAUM\Source\daum\daum-old\bin\Debug\net5.0\daum-old.dll
+D:\Repos\DAUM\Source\daum\daum-old\bin\Debug\net5.0\ref\daum-old.dll
+D:\Repos\DAUM\Source\daum\daum-old\bin\Debug\net5.0\daum-old.pdb
+D:\Repos\DAUM\Source\daum\daum-old\bin\Debug\net5.0\Newtonsoft.Json.dll
+D:\Repos\DAUM\Source\daum\daum-old\obj\Debug\net5.0\daum-old.GeneratedMSBuildEditorConfig.editorconfig
+D:\Repos\DAUM\Source\daum\daum-old\obj\Debug\net5.0\daum-old.AssemblyInfoInputs.cache
+D:\Repos\DAUM\Source\daum\daum-old\obj\Debug\net5.0\daum-old.AssemblyInfo.cs
+D:\Repos\DAUM\Source\daum\daum-old\obj\Debug\net5.0\daum-old.csproj.CoreCompileInputs.cache
+D:\Repos\DAUM\Source\daum\daum-old\obj\Debug\net5.0\daum-old.csproj.CopyComplete
+D:\Repos\DAUM\Source\daum\daum-old\obj\Debug\net5.0\daum-old.dll
+D:\Repos\DAUM\Source\daum\daum-old\obj\Debug\net5.0\ref\daum-old.dll
+D:\Repos\DAUM\Source\daum\daum-old\obj\Debug\net5.0\daum-old.pdb
+D:\Repos\DAUM\Source\daum\daum-old\obj\Debug\net5.0\daum-old.genruntimeconfig.cache
