@@ -63,7 +63,8 @@ namespace daum.OffSetter
 
         private static RunData ProcessArgs(string argsString)
         {
-            List<string> args = Program.ParseCommandString(argsString);
+            bool _ = false;
+            List<string> args = Program.ParseCommandString(argsString, ref _);
             RunData result = new RunData();
 
             foreach (string arg in args)

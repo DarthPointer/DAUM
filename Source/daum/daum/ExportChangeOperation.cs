@@ -197,7 +197,8 @@ namespace daum
                 },
                 writer = (ref Int32 offset, string value) =>
                 {
-                    List<string> args = Program.ParseCommandString(value);
+                    bool _ = false;
+                    List<string> args = Program.ParseCommandString(value, ref _);
                     Int32 nameIndex = GetNameIndex(args).Value;
                     Int32 nameAug = Int32.Parse(args.TakeArg());
                     BitConverter.GetBytes(nameIndex).CopyTo(Program.runData.uexp, offset); offset += 4;
@@ -213,7 +214,8 @@ namespace daum
                 },
                 writer = (ref Int32 offset, string value) =>
                 {
-                    Int32 objectIndex = GetImportExportIndex(Program.runData.uasset, Program.ParseCommandString(value)).Value;
+                    bool _ = false;
+                    Int32 objectIndex = GetImportExportIndex(Program.runData.uasset, Program.ParseCommandString(value, ref _)).Value;
                     BitConverter.GetBytes(objectIndex).CopyTo(Program.runData.uexp, offset); offset += 4;
                 },
                 ConstantSize = 4
@@ -397,7 +399,8 @@ namespace daum
             }
             else if (customRunDara.mode == ECOCustomRunDara.Mode.add && readingContext.targetContext.Count == 0)
             {
-                byte[] insert = GenerateInsert(Program.ParseCommandString(customRunDara.newValue), new List<string>()
+                bool _ = false;
+                byte[] insert = GenerateInsert(Program.ParseCommandString(customRunDara.newValue, ref _), new List<string>()
                 { propertyNamePatternElementName, propertyTypePatternElementName });
 
                 readingContext.sizeChange = insert.Length;
@@ -598,7 +601,8 @@ namespace daum
 
             if (thisArrayIsExtended)
             {
-                byte[] insert = GenerateInsert(Program.ParseCommandString(customRunDara.newValue), repeatedPattern);
+                bool _ = false;
+                byte[] insert = GenerateInsert(Program.ParseCommandString(customRunDara.newValue, ref _), repeatedPattern);
                 customRunDara.sizeChange = insert.Length;
                 readingContext.sizeChange = customRunDara.sizeChange;
 
