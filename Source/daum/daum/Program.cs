@@ -98,7 +98,7 @@ namespace daum
                 {
                     try
                     {
-                        List<string> parsedCommand = ParseCommandString(command);
+                        List<string> parsedCommand = ParseCommandString(command, ref runData.multiLineCommented);
 
                         ProcessCommand(config, runData, parsedCommand, out _, out _, out _);
                     }
@@ -140,7 +140,7 @@ namespace daum
 
                         if (runData.recordCommands && input != stopRecordingCommand) runData.commandsRecordingFile.WriteLine(input);
 
-                        List<string> command = ParseCommandString(input);
+                        List<string> command = ParseCommandString(input, ref runData.multiLineCommented);
                         if (command.Count > 0)
                         {
                             if (command[0].Length > 0)
@@ -309,7 +309,8 @@ namespace daum
 
             else
             {
-                return ParseCommandString(File.ReadAllText(runData.toolDir + key));
+                bool _ = false;
+                return ParseCommandString(File.ReadAllText(runData.toolDir + key), ref _);
             }
         }
 
@@ -337,7 +338,7 @@ namespace daum
             parser.WaitForExit();
         }
 
-        public static List<string> ParseCommandString(string command)
+        public static List<string> ParseCommandString(string command, ref bool isMultiLineCommented)
         {
             List<string> result = new List<string>();
 
@@ -345,70 +346,114 @@ namespace daum
             const char spacedArgBracket = '"';
             const char spaceArgSeparator = ' ';
 
+            const string singleLineComment = "//";
+            const string multiLineCommentStart = "/*";
+            const string multiLineCommentEnd = "*/";
+
             string buffer = "";
             bool isEscSeq = false;
             bool insideSpacedArgBrackets = false;
             char lastChar = (char)0;
+            char prevChar = (char)0;
+            bool singleLineCommented = false;
 
             foreach (char c in command)
             {
+                prevChar = lastChar;
                 lastChar = c;
-                if (!isEscSeq)
+
+                if (!singleLineCommented && !isMultiLineCommented)
                 {
-                    switch (c)
+                    if (!insideSpacedArgBrackets && prevChar == singleLineComment[0] && c == singleLineComment[1])
                     {
-                        case escapeChar:
-                            isEscSeq = true;
-                            break;
+                        singleLineCommented = true;
+
+                        buffer = buffer.Remove(buffer.Length - 1);
+                        if (buffer != "")
+                        {
+                            result.Add(buffer);
+                            buffer = "";
+                        }
+
+                        lastChar = (char)0;
+                    }
+                    else if (!insideSpacedArgBrackets && prevChar == multiLineCommentStart[0] && c == multiLineCommentStart[1])
+                    {
+                        isMultiLineCommented = true;
+
+                        buffer = buffer.Remove(buffer.Length - 1);
+                        if (buffer != "")
+                        {
+                            result.Add(buffer);
+                            buffer = "";
+                        }
+                    
+                        lastChar = (char)0;
+                    }
+                    else if (!isEscSeq)
+                    {
+                        switch (c)
+                        {
+                            case escapeChar:
+                                isEscSeq = true;
+                                break;
 
 
-                        case spacedArgBracket:
-                            insideSpacedArgBrackets = !insideSpacedArgBrackets;
-                            if (!insideSpacedArgBrackets)
-                            {
-                                result.Add(buffer);
-                                buffer = "";
-                            }
-                            break;
-
-
-                        case spaceArgSeparator:
-                            if (!insideSpacedArgBrackets)
-                            {
-                                if (buffer != "")
+                            case spacedArgBracket:
+                                insideSpacedArgBrackets = !insideSpacedArgBrackets;
+                                if (!insideSpacedArgBrackets)
                                 {
                                     result.Add(buffer);
                                     buffer = "";
                                 }
-                            }
-                            else
-                            {
+                                break;
+
+
+                            case spaceArgSeparator:
+                                if (!insideSpacedArgBrackets)
+                                {
+                                    if (buffer != "")
+                                    {
+                                        result.Add(buffer);
+                                        buffer = "";
+                                    }
+                                }
+                                else
+                                {
+                                    buffer += c;
+                                }
+                                break;
+
+
+                            default:
                                 buffer += c;
-                            }
-                            break;
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        switch (c)
+                        {
+                            case escapeChar:
+                                buffer += c;
+                                isEscSeq = false;
+                                break;
 
+                            case spacedArgBracket:
+                                buffer += c;
+                                isEscSeq = false;
+                                break;
 
-                        default:
-                            buffer += c;
-                            break;
+                            default:
+                                throw new FormatException($"Escape seq '{escapeChar}{c}' is not supported");
+                        }
                     }
                 }
                 else
                 {
-                    switch (c)
+                    if (isMultiLineCommented && prevChar == multiLineCommentEnd[0] && c == multiLineCommentEnd[1])
                     {
-                        case escapeChar:
-                            buffer += c;
-                            isEscSeq = false;
-                            break;
-
-                        case spacedArgBracket:
-                            buffer += c;
-                            isEscSeq = false;
-                            break;
-
-                        default:
-                            throw new FormatException($"Escape seq '{escapeChar}{c}' is not supported");
+                        isMultiLineCommented = false;
                     }
                 }
             }
@@ -531,6 +576,8 @@ namespace daum
             public HeaderOffsets headerOffsets;
 
             public Syntax currentSyntax;
+
+            public bool multiLineCommented;
         }
 
         public class Syntax

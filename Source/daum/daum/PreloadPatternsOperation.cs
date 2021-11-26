@@ -17,22 +17,24 @@ namespace daum
 
             Program.runData.preloadedPatterns.Clear();
 
+            bool _ = false;
+
             foreach (string file in propertyPatternFiles)
             {
                 string patternKey = Program.PatternFolders.property + '/' + file.Substring(file.LastIndexOf('\\') + 1);
-                Program.runData.preloadedPatterns[patternKey] = Program.ParseCommandString(File.ReadAllText(file));
+                Program.runData.preloadedPatterns[patternKey] = Program.ParseCommandString(File.ReadAllText(file), ref _);
             }
 
             foreach (string file in bodyPatternFiles)
             {
                 string patternKey = Program.PatternFolders.body + '/' + file.Substring(file.LastIndexOf('\\') + 1);
-                Program.runData.preloadedPatterns[patternKey] = Program.ParseCommandString(File.ReadAllText(file));
+                Program.runData.preloadedPatterns[patternKey] = Program.ParseCommandString(File.ReadAllText(file), ref _);
             }
 
             foreach (string file in structPatternFiles)
             {
                 string patternKey = Program.PatternFolders.structure + '/' + file.Substring(file.LastIndexOf('\\') + 1);
-                Program.runData.preloadedPatterns[patternKey] = Program.ParseCommandString(File.ReadAllText(file));
+                Program.runData.preloadedPatterns[patternKey] = Program.ParseCommandString(File.ReadAllText(file), ref _);
             }
 
             Program.runData.patternsArePreloaded = true;
