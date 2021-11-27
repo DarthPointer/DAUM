@@ -57,11 +57,16 @@ namespace daum
             { "Revert", new Revert() }
         };
 
-        static string defaultSyntax = "2.0.1.0";
+        static string defaultSyntax = "2.0.1.1";
 
         public static Dictionary<string, Syntax> syntaxes = new Dictionary<string, Syntax>()
         {
-            { "2.0.1.0", new Syntax() }
+            { "2.0.1.0", new Syntax()
+            {
+                comments = false
+            } },
+
+            { "2.0.1.1", new Syntax() }
         };
 
         public const string backupPostfix = ".daum";
@@ -364,7 +369,7 @@ namespace daum
 
                 if (!singleLineCommented && !isMultiLineCommented)
                 {
-                    if (!insideSpacedArgBrackets && prevChar == singleLineComment[0] && c == singleLineComment[1])
+                    if (!insideSpacedArgBrackets && prevChar == singleLineComment[0] && c == singleLineComment[1] && runData.currentSyntax.comments)
                     {
                         singleLineCommented = true;
 
@@ -377,7 +382,7 @@ namespace daum
 
                         lastChar = (char)0;
                     }
-                    else if (!insideSpacedArgBrackets && prevChar == multiLineCommentStart[0] && c == multiLineCommentStart[1])
+                    else if (!insideSpacedArgBrackets && prevChar == multiLineCommentStart[0] && c == multiLineCommentStart[1] && runData.currentSyntax.comments)
                     {
                         isMultiLineCommented = true;
 
@@ -583,6 +588,8 @@ namespace daum
         public class Syntax
         {
             public string Code => syntaxes.Where(x => x.Value == this).First().Key;
+
+            public bool comments = true;
         }
 
         [JsonObject]
